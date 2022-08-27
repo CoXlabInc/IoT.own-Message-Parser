@@ -1,0 +1,14 @@
+version: '3'
+
+services:
+  iotown_message_parser:
+    image: iotown_message_parser
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    logging:
+      driver: "local"
+    env_file:
+      - .env
+    command: python3 -u run.py --url ${IOTOWN_URL} --user ${IOTOWN_USER} --token ${IOTOWN_TOKEN}
