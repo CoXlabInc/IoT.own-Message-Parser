@@ -4,6 +4,54 @@ import pyiotown.get
 import base64
 
 url = None
+dry_run = False
+
+def post_process_em300(message):
+    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
+        print(f'[EM300] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
+        return message
+
+    raw = base64.b64decode(message['lora_meta']['raw'])
+    print(f'[EM300] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["ntype"]}, desc.:{message["ndesc"]}, data:{message["data"]}, raw:{raw}')
+
+    index = 0
+    
+    while index < len(raw):
+        if raw[index + 1] == 0x00 and raw[index] == 0x05:
+            if raw[index + 2] == 0x00:
+                message['data'][f'CH{raw[index]}_WaterLeakage'] = 'no'
+            elif raw[index + 2] == 0x01:
+                message['data'][f'CH{raw[index]}_WaterLeakage'] = 'leakage'
+            else:
+                message['data'][f'CH{raw[index]}_WaterLeakage'] = f'unknown({raw[index + 2]})'
+            index += 3
+        elif raw[index + 1] == 0x00 and raw[index] == 0x06:
+            if raw[index + 2] == 0x00:
+                message['data'][f'CH{raw[index]}_MagnetSwitch'] = 'closed'
+            elif raw[index + 2] == 0x01:
+                message['data'][f'CH{raw[index]}_MagnetSwitch'] = 'opened'
+            else:
+                message['data'][f'CH{raw[index]}_MagnetSwitch'] = f'unknown({raw[index + 2]})'
+            index += 3
+        elif raw[index + 1] == 0x67:
+            message['data'][f'CH{raw[index]}_Temperature_degC'] = int.from_bytes(raw[index + 2:index + 4], 'little', signed=True) * 0.1
+            index += 4
+        elif raw[index + 1] == 0x68:
+            message['data'][f'CH{raw[index]}_Humidity_%RH'] = int.from_bytes(raw[index + 2:index + 3], 'little', signed=False) * 0.5
+            index += 3
+        elif raw[index + 1] == 0x75:
+            message['data'][f'CH{raw[index]}_Battery_%'] = int.from_bytes(raw[index + 2:index + 3], 'little', signed=False)
+            index += 3
+        else:
+            print(f"Unknown type 0x{raw[index + 1]:x}")
+            break
+
+    print(message['data'])
+
+    if dry_run:
+        return None
+    else:
+        return message
 
 def post_process_em310_tilt(message):
     if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
@@ -32,7 +80,11 @@ def post_process_em310_tilt(message):
             break
 
     print(message['data'])
-    return message
+
+    if dry_run:
+        return None
+    else:
+        return message
 
 def post_process_em310_udl(message):
     if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
@@ -64,7 +116,11 @@ def post_process_em310_udl(message):
             break
 
     print(message['data'])
-    return message
+
+    if dry_run:
+        return None
+    else:
+        return message
 
 def post_process_em500(message):
     if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
@@ -115,7 +171,11 @@ def post_process_em500(message):
             break
 
     print(message['data'])
-    return message
+
+    if dry_run:
+        return None
+    else:
+        return message
 
 if __name__ == '__main__':
     app_desc = "IoT.own Post Process to Parse Messages from Various Sensors"
@@ -124,13 +184,19 @@ if __name__ == '__main__':
     parser.add_argument("--url", help="IoT.own URL", required=True)
     parser.add_argument("--user", help="IoT.own user name", required=True)
     parser.add_argument("--token", help="IoT.own API Token", required=True)
+    parser.add_argument('--dry', help=" Do not upload data to the server", type=int, default=0)
     args = parser.parse_args()
 
     print(app_desc)
     print(f"URL: {args.url}")
     url = args.url.strip()
 
+    if args.dry == 1:
+        dry_run = True
+        print("DRY RUNNING!")
+
     clients = []
+    clients.append(pyiotown.post.postprocess_common(args.url, 'Milesight EM300', post_process_em300, args.user.strip(), args.token.strip()))
     clients.append(pyiotown.post.postprocess_common(args.url, 'Milesight EM310-TILT', post_process_em310_tilt, args.user.strip(), args.token.strip()))
     clients.append(pyiotown.post.postprocess_common(args.url, 'Milesight EM310-UDL', post_process_em310_udl, args.user.strip(), args.token.strip()))
     clients.append(pyiotown.post.postprocess_common(args.url, 'Milesight EM500', post_process_em500, args.user.strip(), args.token.strip()))
