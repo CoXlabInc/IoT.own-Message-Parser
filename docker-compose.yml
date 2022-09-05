@@ -11,4 +11,4 @@ services:
       driver: "local"
     env_file:
       - .env
-    command: python3 -u run.py --url ${IOTOWN_URL} --user ${IOTOWN_USER} --token ${IOTOWN_TOKEN}
+    command: python3 -u run.py --url ${IOTOWN_URL} --user ${IOTOWN_USER} --token ${IOTOWN_TOKEN} --dry ${DRY_RUN:-'0'}
