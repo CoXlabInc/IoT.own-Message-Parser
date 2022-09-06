@@ -179,4 +179,4 @@ def post_process(message):
     index += (2 + len(message_value))
 
   print(message['data'])
-  return None
+  return message
