@@ -2,7 +2,9 @@ import argparse
 import pyiotown.post
 import pyiotown.post_process
 import pyiotown.get
+
 import Milesight
+import Cuetech
 
 url = None
 dry_run = False
@@ -26,11 +28,13 @@ if __name__ == '__main__':
         print("DRY RUNNING!")
 
     clients = []
-    clients.append(pyiotown.post_process.connect_common(url, 'Milesight AM300', Milesight.am300.post_process, args.user.strip(), args.token.strip()))
-    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM300', Milesight.em300.post_process, args.user.strip(), args.token.strip()))
-    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, args.user.strip(), args.token.strip()))
-    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, args.user.strip(), args.token.strip()))
-    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, args.user.strip(), args.token.strip()))
+    clients.append(pyiotown.post_process.connect_common(url, 'Milesight AM300', Milesight.am300.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
+    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM300', Milesight.em300.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
+    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
+    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
+    clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
+
+    clients.append(pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, args.user.strip(), args.token.strip(), dry_run=dry_run))
     
     pyiotown.post_process.loop_forever(clients)
     
