@@ -47,7 +47,7 @@ def post_process(message):
   print(f'[Cuetech] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["ntype"]}, desc.:{message["ndesc"]}, data:{message["data"]}, raw:{raw}')
 
   index = 0
-  while index < len(raw):
+  while index < len(raw) - 4:
     message_type = raw[index]
     message_value = raw[(index + 2) : (index + 2 + raw[index + 1])]
     print(f"Type:0x{message_type:02X}, Value:0x{' '.join(format(x, '02X') for x in message_value)}")
