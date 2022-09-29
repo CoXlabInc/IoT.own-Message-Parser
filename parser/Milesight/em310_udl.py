@@ -30,8 +30,4 @@ def post_process(message):
             break
 
     print(message['data'])
-
-    if dry_run:
-        return None
-    else:
-        return message
+    return message
