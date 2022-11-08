@@ -1,4 +1,5 @@
 import base64
+from datetime import datetime, timedelta
 
 def post_process(message):
     if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
@@ -19,12 +20,30 @@ def post_process(message):
         message['data']['fire_valid'] = ((raw[0] & (1 << 3)) != 0)
         message['data']['fire_detected'] = ((raw[0] & (1 << 4)) != 0)
         message['data']['fire_low_battery'] = ((raw[0] & (1 << 5)) != 0)
-        message['data']['temperature'] = int.from_bytes(raw[5:7], signed=True) / 100
-        message['data']['humidity'] = int.from_bytes(raw[7:9], signed=False) / 100
-        message['data']['fire_value'] = int.from_bytes(raw[9:11], signed=False) / 10
-        message['data']['fire_threshold'] = int.from_bytes(raw[11:13], signed=False) / 10
-        message['data']['bat_voltage'] = int.from_bytes(raw[13:15], signed=False) / 1000
-        message['data']['report_period'] = int.from_bytes(raw[15:17], signed=False)
+        message['data']['temperature'] = int.from_bytes(raw[5:7], 'little', signed=True) / 100
+        message['data']['humidity'] = int.from_bytes(raw[7:9], 'little', signed=False) / 100
+        message['data']['fire_value'] = int.from_bytes(raw[9:11], 'little', signed=False) / 10
+        message['data']['fire_threshold'] = int.from_bytes(raw[11:13], 'little', signed=False) / 10
+        message['data']['bat_voltage'] = int.from_bytes(raw[13:15], 'little', signed=False) / 1000
+        message['data']['report_period'] = int.from_bytes(raw[15:17], 'little', signed=False)
+        print(f"[DT-D100] SHT+fire+switch type: {message['data']}")
+    elif len(raw) == 15:
+        # SHT + Fire + Switch (errorneous firmware already deployed)
+        #epoch = int.from_bytes(raw[1:5], 'little', signed=False)
+        #message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+        
+        #message['data']['nc_switch_open'] = ((raw[0] & (1 << 0)) != 0)
+        message['data']['no_switch_open'] = ((raw[0] & (1 << 1)) != 0)
+        #message['data']['sht_valid'] = ((raw[0] & (1 << 2)) != 0)
+        #message['data']['fire_valid'] = ((raw[0] & (1 << 3)) != 0)
+        #message['data']['fire_detected'] = ((raw[0] & (1 << 4)) != 0)
+        #message['data']['fire_low_battery'] = ((raw[0] & (1 << 5)) != 0)
+        message['data']['temperature'] = int.from_bytes(raw[5:7], 'little', signed=True) / 100
+        message['data']['humidity'] = int.from_bytes(raw[7:9], 'little', signed=False) / 100
+        message['data']['fire_value'] = int.from_bytes(raw[9:11], 'little', signed=False) / 10
+        message['data']['fire_threshold'] = int.from_bytes(raw[11:13], 'little', signed=False) / 10
+        message['data']['bat_voltage'] = int.from_bytes(raw[13:15], 'little', signed=False) / 1000
+        #message['data']['report_period'] = int.from_bytes(raw[15:17], 'little', signed=False)
         print(f"[DT-D100] SHT+fire+switch type: {message['data']}")
     elif len(raw) == 9:
         # Float
@@ -35,8 +54,8 @@ def post_process(message):
         message['data']['h_float'] = ((raw[0] & (1 << 1)) != 0)
         message['data']['l_float'] = ((raw[0] & (1 << 2)) != 0)
         message['data']['ll_float'] = ((raw[0] & (1 << 2)) != 0)
-        message['data']['bat_voltage'] = int.from_bytes(raw[5:7], signed=False) / 1000
-        message['data']['report_period'] = int.from_bytes(raw[7:9], signed=False)
+        message['data']['bat_voltage'] = int.from_bytes(raw[5:7], 'little', signed=False) / 1000
+        message['data']['report_period'] = int.from_bytes(raw[7:9], 'little', signed=False)
         print(f"[DT-D100] float type: {message['data']}")
     else:
         print(f'[DT-D100] Unknown message')
