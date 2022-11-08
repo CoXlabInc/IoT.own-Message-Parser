@@ -19,9 +19,10 @@ def parse_sensor_value(message_type, message_value):
   elif unit == 5:
     key += '_cm'
 
+  signed = True if message_type in ['Temperature'] else False
   status = (message_value[0] & 0b00001100) >> 2
   if status == 0:
-    value = int.from_bytes(message_value[1:], 'big', signed=True)
+    value = int.from_bytes(message_value[1:], 'big', signed=signed)
 
     divisor = (message_value[0] & 0b00000011)
     if divisor == 1:
