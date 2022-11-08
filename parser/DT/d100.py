@@ -1,0 +1,44 @@
+import base64
+
+def post_process(message):
+    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
+        print(f'[DT-D100] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
+        return message
+
+    raw = base64.b64decode(message['lora_meta']['raw'])
+    print(f'[DT-D100] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["ntype"]}, desc.:{message["ndesc"]}, data:{message["data"]}, raw:{raw}')
+
+    if len(raw) == 17:
+        # SHT + Fire + Switch
+        epoch = int.from_bytes(raw[1:5], 'little', signed=False)
+        message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+        
+        message['data']['nc_switch_open'] = ((raw[0] & (1 << 0)) != 0)
+        message['data']['no_switch_open'] = ((raw[0] & (1 << 1)) != 0)
+        message['data']['sht_valid'] = ((raw[0] & (1 << 2)) != 0)
+        message['data']['fire_valid'] = ((raw[0] & (1 << 3)) != 0)
+        message['data']['fire_detected'] = ((raw[0] & (1 << 4)) != 0)
+        message['data']['fire_low_battery'] = ((raw[0] & (1 << 5)) != 0)
+        message['data']['temperature'] = int.from_bytes(raw[5:7], signed=True) / 100
+        message['data']['humidity'] = int.from_bytes(raw[7:9], signed=False) / 100
+        message['data']['fire_value'] = int.from_bytes(raw[9:11], signed=False) / 10
+        message['data']['fire_threshold'] = int.from_bytes(raw[11:13], signed=False) / 10
+        message['data']['bat_voltage'] = int.from_bytes(raw[13:15], signed=False) / 1000
+        message['data']['report_period'] = int.from_bytes(raw[15:17], signed=False)
+        print(f"[DT-D100] SHT+fire+switch type: {message['data']}")
+    elif len(raw) == 9:
+        # Float
+        epoch = int.from_bytes(raw[1:5], 'little', signed=False)
+        message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+
+        message['data']['hh_float'] = ((raw[0] & (1 << 0)) != 0)
+        message['data']['h_float'] = ((raw[0] & (1 << 1)) != 0)
+        message['data']['l_float'] = ((raw[0] & (1 << 2)) != 0)
+        message['data']['ll_float'] = ((raw[0] & (1 << 2)) != 0)
+        message['data']['bat_voltage'] = int.from_bytes(raw[5:7], signed=False) / 1000
+        message['data']['report_period'] = int.from_bytes(raw[7:9], signed=False)
+        print(f"[DT-D100] float type: {message['data']}")
+    else:
+        print(f'[DT-D100] Unknown message')
+
+    return message

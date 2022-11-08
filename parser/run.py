@@ -46,6 +46,8 @@ if __name__ == '__main__':
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
 
     clients.append(pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
-    
+
+    clients.append(pyiotown.post_process.connect_common(url, 'DT-D100', DT.d100.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
+
     pyiotown.post_process.loop_forever(clients)
     
