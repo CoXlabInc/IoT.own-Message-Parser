@@ -8,6 +8,7 @@ import pyiotown.get
 import Milesight
 import Cuetech
 import DT
+import PLNetworks
 
 url = None
 dry_run = False
@@ -45,10 +46,7 @@ if __name__ == '__main__':
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
-
     clients.append(pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
-
     clients.append(pyiotown.post_process.connect_common(url, 'DT-D100', DT.d100.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
-
+    clients.append(pyiotown.post_process.connect_common(url, 'PLNetworks', PLNetworks.post_process, args.user.strip(), args.token.strip(), mqtt_host, mqtt_port, dry_run=dry_run))
     pyiotown.post_process.loop_forever(clients)
-    

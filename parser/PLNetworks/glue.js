@@ -6,18 +6,24 @@ process.stdout.setEncoding('utf-8')
 process.stdin.on('readable', () => {
   const input = process.stdin.read()
   if (!!input) {
-    i = JSON.parse(input)
-    console.error(i.data)
-
-    decoded_data = Buffer.from(i.data, 'base64')
-    
-    console.error(decoded_data)
-
     let out = {}
+    let i = {}
+    let decoded_data;
     try {
-      out = handler.dataHandler(decoded_data, i.node, i.gateway);
+      i = JSON.parse(input)
+      decoded_data = Buffer.from(i.data, 'base64')
+    
+      console.error(decoded_data)
     } catch(e) {
-      console.error(e);
+      console.error(e)
+      console.log(JSON.stringify(out))
+      return
+    }
+
+    try {
+      out = handler.dataHandler(decoded_data, i.node, i.gateway)
+    } catch(e) {
+      console.error(e)
     }
     console.log(JSON.stringify(out))
   }

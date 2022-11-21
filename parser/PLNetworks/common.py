@@ -10,14 +10,21 @@ def post_process(message):
         print(f'[PLN] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
         return message
 
-    input_data = { "data": base64.b64decode(message['lora_meta']['raw']),
+    input_data = { "data": message['lora_meta']['raw'],
                    "node": message['device'],
                    "gateway": message['gateway'] }
 
-    ps.stdin.write(json.dumps(input_data))
+    ps.stdin.write(json.dumps(input_data).encode('ascii'))
     ps.stdin.flush()
     
-    return ps.stdout.readline()
+    result = ps.stdout.readline()
+    print(result)
+    
+    result_dict = json.loads(result)
+    for key in result_dict.keys():
+    	message['data'][key] = result_dict[key]
+    return message
+    
 
 if __name__ == '__main__':
     raw = 'VQABAF4CAKlsGOaWV4yPhsGsR4vDjeaWV4yPhu0Gklsje8IEZGJkZPABXQ=='
@@ -27,4 +34,3 @@ if __name__ == '__main__':
     ps.stdin.flush()
     out = ps.stdout.readline()
     print(out)
-    
