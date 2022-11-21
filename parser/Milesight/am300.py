@@ -6,7 +6,7 @@ def post_process(message):
         return message
 
     raw = base64.b64decode(message['lora_meta']['raw'])
-    print(f'[AM300] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["ntype"]}, desc.:{message["ndesc"]}, data:{message["data"]}, raw:{raw}')
+    print(f'[AM300] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["device"]["type"]}, desc.:{message["device"]["desc"]}, data:{message["data"]}, raw:{raw}')
 
     index = 0
     

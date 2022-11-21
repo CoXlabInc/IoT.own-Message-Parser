@@ -45,7 +45,7 @@ def post_process(message):
     return message
 
   raw = base64.b64decode(message['lora_meta']['raw'])
-  print(f'[Cuetech] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["ntype"]}, desc.:{message["ndesc"]}, data:{message["data"]}, raw:{raw}')
+  print(f'[Cuetech] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["device"]["type"]}, desc.:{message["device"]["desc"]}, data:{message["data"]}, raw:{raw}')
 
   index = 0
   while index < len(raw) - 4:
