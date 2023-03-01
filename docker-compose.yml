@@ -11,4 +11,14 @@ services:
       driver: "local"
     env_file:
       - .env
-    command: python3 -u run.py --url ${IOTOWN_URL} --user ${IOTOWN_USER} --token ${IOTOWN_TOKEN} --dry ${DRY_RUN:-'0'}
+    volumes:
+      - ./parser:/root/
+    command: python3 -u run.py --url ${IOTOWN_URL} --redis_url redis://redis --dry ${DRY_RUN:-'0'}
+
+  redis:
+    image: redis:7.0.5-alpine
+    restart: always
+    logging:
+      driver: "local"
+    volumes:
+      - ./redis-data:/data
