@@ -6,8 +6,6 @@ import redis
 from urllib.parse import urlparse
 
 TAG = 'EdgeEye'
-iotown_url = None
-iotown_token = None
 
 def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     global iotown_url, iotown_token
@@ -31,7 +29,7 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
         print(e)
         return None
     
-    return pyiotown.post_process.connect_common(url, 'EdgeEye', post_process, mqtt_url, dry_run=dry_run)
+    return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message):
     if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None or message['lora_meta'].get('fPort') is None:

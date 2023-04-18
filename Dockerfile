@@ -2,7 +2,7 @@ FROM python:3-alpine
 WORKDIR /root/
 
 RUN apk add --no-cache nodejs
-RUN python3 -m pip install pyiotown==0.4.3.dev4
+RUN python3 -m pip install pyiotown==0.4.3.dev6
 RUN python3 -m pip install redis
 
 COPY ./parser .

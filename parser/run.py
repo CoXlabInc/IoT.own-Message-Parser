@@ -50,5 +50,9 @@ if __name__ == '__main__':
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'PLNetworks', PLNetworks.post_process, mqtt_url, dry_run=dry_run))
-    clients.append(pyiotown.post_process.connect_common(url, 'Rootech Accura3300e', Rootech.accura3300e.post_process, mqtt_url, dry_run=dry_run))
+
+    c = Rootech.accura3300e.init(url, 'Rootech Accura3300e', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+    
     pyiotown.post_process.loop_forever(clients)
