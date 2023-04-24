@@ -1,6 +1,6 @@
 import base64
 from datetime import datetime, timedelta
-
+import json
 import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
@@ -26,17 +26,11 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
             r = None
             raise Exception('Redis connection failed')
     except Exception as e:
-        print(e)
-        return None
+        raise(e)
     
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message):
-    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None or message['lora_meta'].get('fPort') is None:
-        print(f'[{TAG}] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]} <= lora_meta:{message.get("lora_meta")})')
-        
-        return message
-
     raw = base64.b64decode(message['lora_meta']['raw'])
 
     #TODO length check
@@ -48,7 +42,7 @@ def post_process(message):
     fcnt = message["lora_meta"].get("fCnt")
 
     #MUTEX
-    mutex_key = f"EdgeEye:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
+    mutex_key = f"PP:EdgeEye:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
     
     lock = r.set(mutex_key, 'lock', ex=30, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
@@ -57,11 +51,12 @@ def post_process(message):
 
     #PRR calculation
     #TODO When should the recent number of frames be initialized to 0?
-    recent_num_frames_key = f"EdgeEye:RecentNumFrames:{message['grpid']}:{message['nid']}"
-    devaddr_key = f"EdgeEye:DevAddr:{message['grpid']}:{message['nid']}"
+    recent_num_frames_key = f"PP:EdgeEye:RecentNumFrames:{message['grpid']}:{message['nid']}"
+    devaddr_key = f"PP:EdgeEye:DevAddr:{message['grpid']}:{message['nid']}"
     devaddr = r.get(devaddr_key)
     if devaddr is None or fcnt == 0:
-        result = pyiotown.get.node(iotown_url, iotown_token, message['nid'], group_id=message['grpid'])
+        # FIXME The sensor can start with empty frames. So it can enters into here with fcnt > 0.
+        result = pyiotown.get.node(iotown_url, iotown_token, message['nid'], group_id=message['grpid'], verify=False)
         try:
             devaddr_current = result['node']['lorawan']['session']['devAddr']
         except Exception as e:
@@ -86,7 +81,7 @@ def post_process(message):
 
     r.set(recent_num_frames_key, recent_num_frames)
     
-    recent_fcnts_key = f"EdgeEye:RecentFCnts:{message['grpid']}:{message['nid']}"
+    recent_fcnts_key = f"PP:EdgeEye:RecentFCnts:{message['grpid']}:{message['nid']}"
     recent_fcnts = r.smembers(recent_fcnts_key)
 
     if recent_num_frames <= fcnt:
@@ -94,7 +89,6 @@ def post_process(message):
     else:
         to_be_removed = [item for item in recent_fcnts if int(item) > fcnt and int(item) < (65535 - (recent_num_frames - fcnt))] 
 
-    print(f"[{TAG}] recent num frames: {recent_num_frames}, To be removed: {to_be_removed}")
     if len(to_be_removed) > 0:
         p = r.pipeline()
         for x in to_be_removed:
@@ -106,12 +100,62 @@ def post_process(message):
 
     recent_fcnts = r.smembers(recent_fcnts_key)
     prr = len(recent_fcnts) / recent_num_frames
-    print(f"[{TAG}] PRR: {prr} = {len(recent_fcnts)} / {recent_num_frames}")
+    print(f"[{TAG}] recent num frames: {recent_num_frames}, To be removed: {to_be_removed}, PRR: {prr} = {len(recent_fcnts)} / {recent_num_frames}")
 
-        
+    epoch = int.from_bytes(raw[1:6], 'little', signed=False)
+    sense_time = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+    offset = int.from_bytes(raw[6:9], 'little', signed=False)
+
+    offset_key = f"PP:EdgeEye:offset:{message['nid']}:{epoch}"
+    offset_next = r.get(offset_key)
+    if offset_next is None:
+        offset_next = 0
+    else:
+        offset_next = int(offset_next)
+
+    if offset > offset_next:
+        print(f"[{TAG}] There was packet loss. (nid: {message['nid']}, offset {offset_next} is expected but {offset})")
+        #TODO How can I notify it to the sensor?
+        return message
+
+    lora_meta_key = f"PP:EdgeEye:lora_meta:{message['nid']}:{epoch}"
+    lora_meta = r.get(lora_meta_key)
+    if lora_meta is None:
+        lora_meta = []
+    else:
+        lora_meta = json.loads(lora_meta.decode('ascii'))
+
+    l = message['lora_meta']
+    del l['raw']
+    lora_meta.append(l)
     
-    print(f'[{TAG}] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["device"]["type"]}, desc.:{message["device"]["desc"]}, fcnt:{fcnt}, data:{message["data"]}, Epoch:{epoch}, Offset:{offset}, Flags:0x{flags:02x}, Frag:{frag} raw:{raw}')
+    image_buffer_key = f"PP:EdgeEye:buffer:{message['nid']}:{epoch}"
 
-    print(f"[{TAG}] unknown format ({message['lora_meta']['fPort']}, {len(raw)})")
+    last_frag = (((raw[0] >> 0) & 1) == 1)
+    if last_frag:
+        image = r.get(image_buffer_key)
+        image += raw[9:]
+
+        message['data']['image'] = {
+            'raw': image,
+            'file_type': 'image',
+            'file_ext': 'jpeg',
+            'sense_time': sense_time,
+            'lora_meta_total': lora_meta,
+        }
+        r.delete(image_buffer_key)
+        r.delete(offset_key)
+        r.delete(lora_meta_key)
+        print(f"[{TAG}] image reassembly completed (nid:{message['nid']}, size:{len(image)})")
+    else:
+        r.setrange(image_buffer_key, offset, raw[9:])
+        offset += len(raw) - 9
+        r.set(offset_key, offset)
+        r.set(lora_meta_key, json.dumps(lora_meta))
+        r.expire(image_buffer_key, 60)
+        r.expire(offset_key, 60)
+        r.expire(lora_meta_key, 60)
+        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, offset:{offset})")
+        return None
 
     return message
