@@ -32,16 +32,16 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
 
 def post_process(message):
   raw = base64.b64decode(message['lora_meta']['raw'])
-  fcnt = message['lora_meta'].get('fCnt')
   
   #MUTEX
-  mutex_key = f"RootechAccura3300e:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
+  mutex_key = f"PP:RootechAccura3300e:MUTEX:{message['grpid']}:{message['key']}"
 
   lock = r.set(mutex_key, 'lock', ex=30, nx=True)
-  print(f"[{TAG}] lock with '{mutex_key}': {lock}")
   if lock != True:
     return None
 
+  print(f"[{TAG}] lock with '{mutex_key}': {lock}")
+  
   if len(raw) < 6:
     raise Exception('Too short')
   
@@ -66,12 +66,12 @@ def post_process(message):
     name, val, size = parse_register(address + (index // 2) + 1, raw[9 + index:])
     if name is not None:
       message['data'][name] = val
-      print(f"[{address + (index // 2)}] {name}: {val}")
+      #print(f"[{address + (index // 2)}] {name}: {val}")
       index += size
     else:
       raise Exception(f"Parsing error at offset {index + 9}")
   
-  print(f"[{TAG}] raw:{raw}")
+  #print(f"[{TAG}] raw:{raw}")
   return message
 
 def parse_register(address, buf):
