@@ -2,15 +2,15 @@ import base64
 from datetime import datetime, timedelta
 
 def post_process(message):
-    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None or message['lora_meta'].get('fPort') is None:
-        print(f'[DT-D100] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]} <= lora_meta:{message.get("lora_meta")})')
+    if message.get('meta') is None or message['meta'].get('raw') is None or message['meta'].get('fPort') is None:
+        print(f'[DT-D100] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]} <= meta:{message.get("meta")})')
         
         return message
 
-    raw = base64.b64decode(message['lora_meta']['raw'])
+    raw = base64.b64decode(message['meta']['raw'])
     print(f'[DT-D100] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["device"]["type"]}, desc.:{message["device"]["desc"]}, data:{message["data"]}, raw:{raw}')
 
-    if message['lora_meta']['fPort'] == 1:
+    if message['meta']['fPort'] == 1:
         if len(raw) == 17:
             # SHT + Fire + Switch
             epoch = int.from_bytes(raw[1:5], 'little', signed=False)
@@ -48,8 +48,8 @@ def post_process(message):
             #message['data']['report_period'] = int.from_bytes(raw[15:17], 'little', signed=False)
             print(f"[DT-D100] SHT+fire+switch type: {message['data']}")
         else:
-            print(f"[DT-D100] unknown format ({message['lora_meta']['fPort']}, {len(raw)})")
-    elif message['lora_meta']['fPort'] == 2:
+            print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
+    elif message['meta']['fPort'] == 2:
         if len(raw) == 9:
             # Float
             epoch = int.from_bytes(raw[1:5], 'little', signed=False)
@@ -63,8 +63,8 @@ def post_process(message):
             message['data']['report_period'] = int.from_bytes(raw[7:9], 'little', signed=False)
             print(f"[DT-D100] float type: {message['data']}")
         else:
-            print(f"[DT-D100] unknown format ({message['lora_meta']['fPort']}, {len(raw)})")
+            print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
     else:
-        print(f"[DT-D100] unknown format ({message['lora_meta']['fPort']}, {len(raw)})")
+        print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
 
     return message

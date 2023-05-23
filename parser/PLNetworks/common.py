@@ -6,11 +6,11 @@ import subprocess
 ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
 def post_process(message):
-    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
-        print(f'[PLN] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
+    if message.get('meta') is None or message['meta'].get('raw') is None:
+        print(f'[PLN] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
         return message
 
-    input_data = { "data": message['lora_meta']['raw'],
+    input_data = { "data": message['meta']['raw'],
                    "node": message['device'],
                    "gateway": message['gateway'] }
 

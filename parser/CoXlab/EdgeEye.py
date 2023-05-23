@@ -31,7 +31,7 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message):
-    raw = base64.b64decode(message['lora_meta']['raw'])
+    raw = base64.b64decode(message['meta']['raw'])
 
     #TODO length check
 
@@ -39,7 +39,7 @@ def post_process(message):
     offset = int.from_bytes(raw[6:8], 'little', signed=False)
     flags = raw[8]
     frag = raw[9:]
-    fcnt = message["lora_meta"].get("fCnt")
+    fcnt = message["meta"].get("fCnt")
 
     #MUTEX
     mutex_key = f"PP:EdgeEye:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
@@ -118,16 +118,16 @@ def post_process(message):
         #TODO How can I notify it to the sensor?
         return message
 
-    lora_meta_key = f"PP:EdgeEye:lora_meta:{message['nid']}:{epoch}"
-    lora_meta = r.get(lora_meta_key)
-    if lora_meta is None:
-        lora_meta = []
+    meta_key = f"PP:EdgeEye:meta:{message['nid']}:{epoch}"
+    meta = r.get(meta_key)
+    if meta is None:
+        meta = []
     else:
-        lora_meta = json.loads(lora_meta.decode('ascii'))
+        meta = json.loads(meta.decode('ascii'))
 
-    l = message['lora_meta']
+    l = message['meta']
     del l['raw']
-    lora_meta.append(l)
+    meta.append(l)
     
     image_buffer_key = f"PP:EdgeEye:buffer:{message['nid']}:{epoch}"
 
@@ -141,20 +141,20 @@ def post_process(message):
             'file_type': 'image',
             'file_ext': 'jpeg',
             'sense_time': sense_time,
-            'lora_meta_total': lora_meta,
+            'meta_total': meta,
         }
         r.delete(image_buffer_key)
         r.delete(offset_key)
-        r.delete(lora_meta_key)
+        r.delete(meta_key)
         print(f"[{TAG}] image reassembly completed (nid:{message['nid']}, size:{len(image)})")
     else:
         r.setrange(image_buffer_key, offset, raw[9:])
         offset += len(raw) - 9
         r.set(offset_key, offset)
-        r.set(lora_meta_key, json.dumps(lora_meta))
+        r.set(meta_key, json.dumps(meta))
         r.expire(image_buffer_key, 60)
         r.expire(offset_key, 60)
-        r.expire(lora_meta_key, 60)
+        r.expire(meta_key, 60)
         print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, offset:{offset})")
         return None
 

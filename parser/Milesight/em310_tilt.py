@@ -1,11 +1,11 @@
 import base64
 
 def post_process(message):
-    if message.get('lora_meta') is None or message['lora_meta'].get('raw') is None:
-        print(f'[EM310-TILT] A message have no lora_meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
+    if message.get('meta') is None or message['meta'].get('raw') is None:
+        print(f'[EM310-TILT] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
         return message
 
-    raw = base64.b64decode(message['lora_meta']['raw'])
+    raw = base64.b64decode(message['meta']['raw'])
     print(f'[EM310-TILT] Group ID:{message["grpid"]}, Node ID:{message["nid"]}, type:{message["device"]["type"]}, desc.:{message["device"]["desc"]}, data:{message["data"]}, raw:{raw}')
 
     index = 0
