@@ -11,6 +11,7 @@ import DT
 import Milesight
 import PLNetworks
 import Rootech
+import UniAi
 
 url = None
 dry_run = False
@@ -54,5 +55,7 @@ if __name__ == '__main__':
     c = Rootech.accura3300e.init(url, 'Rootech Accura3300e', mqtt_url, args.redis_url, dry_run=dry_run)
     if c is not None:
         clients.append(c)
+
+    clients.append(pyiotown.post_process.connect_common(url, 'UniAi', UniAi.post_process, mqtt_url, dry_run=dry_run))
     
     pyiotown.post_process.loop_forever(clients)
