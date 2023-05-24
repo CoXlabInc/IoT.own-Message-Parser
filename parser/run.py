@@ -56,6 +56,8 @@ if __name__ == '__main__':
     if c is not None:
         clients.append(c)
 
-    clients.append(pyiotown.post_process.connect_common(url, 'UniAi', UniAi.post_process, mqtt_url, dry_run=dry_run))
+    c = UniAi.init(url, 'UniAi', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
     
     pyiotown.post_process.loop_forever(clients)

@@ -1,1 +1,1 @@
-from .uniai import post_process
+from .uniai import init

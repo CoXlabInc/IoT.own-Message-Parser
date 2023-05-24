@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime, timedelta
+from time import time
 import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
@@ -8,14 +9,64 @@ import json
 
 TAG = 'UniAi'
 
+def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
+  global iotown_url, iotown_token
+  
+  url_parsed = urlparse(url)
+  iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")
+  iotown_token = url_parsed.password
+    
+  if redis_url is None:
+    print(f"[{TAG}] Redis is required.")
+    return None
+
+  global r
+  
+  try:
+    r = redis.from_url(redis_url)
+    if r.ping() == False:
+      r = None
+      raise Exception('Redis connection failed')
+  except Exception as e:
+    raise(e)
+      
+  return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
+
 def post_process(message):
+  mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['key']}"
+
+  lock = r.set(mutex_key, 'lock', ex=30, nx=True)
+  if lock != True:
+    return None
+
+  print(f"[{TAG}] lock with '{mutex_key}': {lock}")
+
   device = {
     'type': message['device']['type'],
   }
 
-  device_desc = json.loads('{' + message['device']['desc'] + '}')
+  if type(message['device']['desc']) is str:
+    device_desc = json.loads('{' + message['device']['desc'] + '}')
+  elif type(message['device']['desc']) is dict:
+    device_desc = message['device']['desc']
+  else:
+    device_desc = {}
+    
   for k in device_desc.keys():
     device[k] = device_desc[k]
+
+  min_interval = device.get('min_interval')
+  if min_interval is not None:
+    last_report_key = f"PP:{TAG}:last_report:{message['grpid']}:{message['nid']}"
+    
+    last_report = r.get(last_report_key)
+    now = time()
+    if last_report is not None:
+      last_report = float(last_report)
+      interval = now - last_report
+      if interval < min_interval:
+        print(f"[{TAG}] interval is too short ({now} (now) - {last_report} (last_report) = {interval} < {min_interval}")
+        return None
     
   if device['type'] == 'CSD3':
     raw = base64.b64decode(message['meta']['raw'])
@@ -35,4 +86,8 @@ def post_process(message):
         raise Exception(f"unsupported gas sensor '{device['sensor']}'")
   else:
     print(f"[{TAG}] unsupported type '{device['type']}'")
+
+  if min_interval is not None:
+    r.set(last_report_key, now, ex=min_interval + 1)
+    
   return message
