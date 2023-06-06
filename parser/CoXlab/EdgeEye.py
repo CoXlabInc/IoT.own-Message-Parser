@@ -104,7 +104,21 @@ def post_process(message):
 
     epoch = int.from_bytes(raw[1:6], 'little', signed=False)
     sense_time = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
-    offset = int.from_bytes(raw[6:9], 'little', signed=False)
+
+    total_size_key = f"PP:EdgeEye:size:{message['nid']}:{epoch}"
+    first_frag = (((raw[0] >> 0) & (1 << 0)) != 0)
+    if first_frag:
+        offset = 0
+        total_size = int.from_bytes(raw[6:9], 'little', signed=False)
+        r.set(total_size_key, total_size)
+    else:
+        offset = int.from_bytes(raw[6:9], 'little', signed=False)
+        total_size = r.get(total_size_key)
+        if total_size is not None:
+            total_size = int(total_size)
+        else:
+            print(f"[{TAG}] GET '{total_size_key}' returned None")
+            total_size = 0
 
     offset_key = f"PP:EdgeEye:offset:{message['nid']}:{epoch}"
     offset_next = r.get(offset_key)
@@ -129,9 +143,12 @@ def post_process(message):
     del l['raw']
     meta.append(l)
     
+    current_key = f"PP:EdgeEye:current:{message['nid']}"
+    if total_size > 0:
+        r.publish(current_key, epoch)
+        
     image_buffer_key = f"PP:EdgeEye:buffer:{message['nid']}:{epoch}"
-
-    last_frag = (((raw[0] >> 0) & 1) == 1)
+    last_frag = (((raw[0] >> 0) & (1 << 1)) != 0)
     if last_frag:
         image = r.get(image_buffer_key)
         image += raw[9:]
@@ -140,12 +157,14 @@ def post_process(message):
             'raw': image,
             'file_type': 'image',
             'file_ext': 'jpeg',
+            'file_size': total_size,
             'sense_time': sense_time,
             'meta_total': meta,
         }
         r.delete(image_buffer_key)
         r.delete(offset_key)
         r.delete(meta_key)
+        r.delete(total_size_key)
         print(f"[{TAG}] image reassembly completed (nid:{message['nid']}, size:{len(image)})")
     else:
         r.setrange(image_buffer_key, offset, raw[9:])
@@ -155,7 +174,8 @@ def post_process(message):
         r.expire(image_buffer_key, 60)
         r.expire(offset_key, 60)
         r.expire(meta_key, 60)
-        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, offset:{offset})")
+        r.expire(total_size_key, 60)
+        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, {offset}/{total_size} ({offset / total_size * 100}))")
         return None
 
     return message
