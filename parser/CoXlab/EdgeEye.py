@@ -145,11 +145,7 @@ def post_process(message):
     
     image_buffer_key = f"PP:EdgeEye:buffer:{message['nid']}:{epoch}"
     rtsp_buffer_key = f"ImageToRtsp:{message['nid']}:image:buffer"
-    rtsp_status_key = f"ImageToRtsp:{message['nid']}:image:status"
-    rtsp_status = {
-        'size': total_size,
-        'offset': offset
-    }
+    rtsp_last_buffer_key = rtsp_buffer_key + ':last'
     
     last_frag = (((raw[0] >> 0) & (1 << 1)) != 0)
     if last_frag:
@@ -157,6 +153,8 @@ def post_process(message):
         image += raw[9:]
 
         r.set(rtsp_buffer_key, image, timedelta(hours=24))
+        r.copy(image_buffer_key, rtsp_last_buffer_key, replace=True)
+        r.expire(rtsp_last_buffer_key, timedelta(hours=24))
 
         message['data']['image'] = {
             'raw': image,
@@ -184,16 +182,5 @@ def post_process(message):
 
         r.copy(image_buffer_key, rtsp_buffer_key, replace=True)
         r.expire(rtsp_buffer_key, timedelta(hours=24))
-
-    if total_size > 0:
-        if first_frag == False:
-            r.publish(rtsp_buffer_key + 'c', raw[9:])
-        status = json.dumps(rtsp_status)
-        r.set(rtsp_status_key, status)
-        r.publish(rtsp_status_key + 'c', status)
-        if first_frag:
-            r.publish(rtsp_buffer_key + 'c', raw[9:])
-    else:
-        print(f"[{TAG}] cannot publish messages for ImageToRtsp due to the 0 total size.")
 
     return message if last_frag else None
