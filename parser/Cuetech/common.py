@@ -11,18 +11,27 @@ def parse_sensor_value(message_type, message_value):
   if unit == 1:
     key += '_V'
   elif unit == 2:
-    key += '_degC'
+    key += '_Kelvin'
   elif unit == 3:
     key += '_%'
   elif unit == 4:
     key += '_ppm'
   elif unit == 5:
     key += '_cm'
+  elif unit == 6:
+    key += '_mS/cm'
+  elif unit == 7:
+    key += '_hPa'
+  elif unit == 8:
+    key += '_m/sec'
+  elif unit == 9:
+    key += '_deg'
+  elif unit == 10:
+    key += '_mm/h'
 
-  signed = True if message_type in ['Temperature'] else False
   status = (message_value[0] & 0b00001100) >> 2
   if status == 0:
-    value = int.from_bytes(message_value[1:], 'big', signed=signed)
+    value = int.from_bytes(message_value[1:], 'big', signed=False)
 
     divisor = (message_value[0] & 0b00000011)
     if divisor == 1:
@@ -38,6 +47,9 @@ def parse_sensor_value(message_type, message_value):
     value = 'ReadFail'
 
   return key, value
+
+def convert_kelvin_to_degc(key, value):
+  return '_DegC'.join(key.rsplit('_Kelvin', 1)), value - 273.1
 
 def post_process(message):
   if message.get('meta') is None or message['meta'].get('raw') is None:
@@ -104,6 +116,47 @@ def post_process(message):
           sensor_list.append('Status_FireExtinguisher')
         elif x == 0xD0:
           sensor_list.append('H')
+        elif x == 0xD1:
+          sensor_list.append('1_DepthToWater')
+        elif x == 0xD2:
+          sensor_list.append('2_DepthToWater')
+        elif x == 0xD3:
+          sensor_list.append('3_DepthToWater')
+        elif x == 0xD4:
+          sensor_list.append('4_DepthToWater')
+        elif x == 0xD5:
+          sensor_list.append('1_SoilTemperature')
+        elif x == 0xD6:
+          sensor_list.append('1_SoilMoisture')
+        elif x == 0xD7:
+          sensor_list.append('1_SoilEC')
+        elif x == 0xD8:
+          sensor_list.append('2_SoilTemperature')
+        elif x == 0xD9:
+          sensor_list.append('2_SoilMoisture')
+        elif x == 0xDA:
+          sensor_list.append('2_SoilEC')
+        elif x == 0xDB:
+          sensor_list.append('GroundSurfaceTemperature')
+        elif x == 0xDC:
+          sensor_list.append('WindDirection')
+        elif x == 0xDD:
+          sensor_list.append('WindSpeed')
+        elif x == 0xDE:
+          sensor_list.append('AmbientTemperature')
+        elif x == 0xDF:
+          sensor_list.append('AmbientHumidity')
+        elif x == 0xE0:
+          sensor_list.append('AtmosphericPressure')
+        elif x == 0xE1:
+          sensor_list.append('Precipitation')
+        elif x == 0xE2:
+          sensor_list.append('Flux')
+        elif x == 0xE3:
+          sensor_list.append('1_Temperature')
+        elif x == 0xE4:
+          sensor_list.append('1_Humidity')
+
       message['data']['SensorList'] = sensor_list
     elif message_type == 0xB2:
       if len(message_value) == 1:
@@ -160,6 +213,8 @@ def post_process(message):
       message['data'][key] = value
     elif message_type == 0xCC:
       key, value = parse_sensor_value('Temperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
       message['data'][key] = value
     elif message_type == 0xCD:
       key, value = parse_sensor_value('Humidity', message_value)
@@ -174,6 +229,76 @@ def post_process(message):
         message['data']['Status'] = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
     elif message_type == 0xD0:
       key, value = parse_sensor_value('H', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD1:
+      key, value = parse_sensor_value('1_DepthToWater', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD2:
+      key, value = parse_sensor_value('2_DepthToWater', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD3:
+      key, value = parse_sensor_value('3_DepthToWater', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD4:
+      key, value = parse_sensor_value('4_DepthToWater', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD5:
+      key, value = parse_sensor_value('1_SoilTemperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
+      message['data'][key] = value
+    elif message_type == 0xD6:
+      key, value = parse_sensor_value('1_SoilMoisture', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD7:
+      key, value = parse_sensor_value('1_SoilEC', message_value)
+      message['data'][key] = value
+    elif message_type == 0xD8:
+      key, value = parse_sensor_value('2_SoilTemperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
+      message['data'][key] = value
+    elif message_type == 0xD9:
+      key, value = parse_sensor_value('2_SoilMoisture', message_value)
+      message['data'][key] = value
+    elif message_type == 0xDA:
+      key, value = parse_sensor_value('2_SoilEC', message_value)
+      message['data'][key] = value
+    elif message_type == 0xDB:
+      key, value = parse_sensor_value('GroundSurfaceTemperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
+      message['data'][key] = value
+    elif message_type == 0xDC:
+      key, value = parse_sensor_value('WindDirection', message_value)
+      message['data'][key] = value
+    elif message_type == 0xDD:
+      key, value = parse_sensor_value('WindSpeed', message_value)
+      message['data'][key] = value
+    elif message_type == 0xDE:
+      key, value = parse_sensor_value('AmbientTemperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
+      message['data'][key] = value
+    elif message_type == 0xDF:
+      key, value = parse_sensor_value('AmbientHumidity', message_value)
+      message['data'][key] = value
+    elif message_type == 0xE0:
+      key, value = parse_sensor_value('AtmosphericPressure', message_value)
+      message['data'][key] = value
+    elif message_type == 0xE1:
+      key, value = parse_sensor_value('Precipitation', message_value)
+      message['data'][key] = value
+    elif message_type == 0xE2:
+      key, value = parse_sensor_value('Flux', message_value)
+      message['data'][key] = value
+    elif message_type == 0xE3:
+      key, value = parse_sensor_value('1_Temperature', message_value)
+      if key.endswith('_Kelvin'):
+        key, value = convert_kelvin_to_degc(key, value)
+      message['data'][key] = value
+    elif message_type == 0xE4:
+      key, value = parse_sensor_value('1_Humidity', message_value)
       message['data'][key] = value
     else:
       message['data'][f'UnknownType_0x{message_type:02X}'] = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
