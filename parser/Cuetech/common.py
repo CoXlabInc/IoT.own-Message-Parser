@@ -49,7 +49,11 @@ def parse_sensor_value(message_type, message_value):
   return key, value
 
 def convert_kelvin_to_degc(key, value):
-  return '_DegC'.join(key.rsplit('_Kelvin', 1)), value - 273.1
+  try:
+    value -= 273.1
+  except Exception as e:
+    pass
+  return '_DegC'.join(key.rsplit('_Kelvin', 1)), value
 
 def post_process(message):
   if message.get('meta') is None or message['meta'].get('raw') is None:
