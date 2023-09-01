@@ -4,6 +4,10 @@ import json
 import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
+import io
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
+from PIL import Image
 
 TAG = 'EdgeEye'
 
@@ -152,6 +156,8 @@ def post_process(message):
         image = r.get(image_buffer_key)
         image += raw[9:]
 
+        image = image_to_jpeg(image)
+        
         r.set(rtsp_buffer_key, image, timedelta(hours=24))
         r.copy(image_buffer_key, rtsp_last_buffer_key, replace=True)
         r.expire(rtsp_last_buffer_key, timedelta(hours=24))
@@ -172,6 +178,9 @@ def post_process(message):
     else:
         r.setrange(image_buffer_key, offset, raw[9:])
         offset += len(raw) - 9
+
+        image = image_to_jpeg(r.get(image_buffer_key))
+        
         r.set(offset_key, offset)
         r.set(meta_key, json.dumps(meta))
         r.expire(image_buffer_key, timedelta(minutes=1))
@@ -184,3 +193,13 @@ def post_process(message):
         r.expire(rtsp_buffer_key, timedelta(hours=24))
 
     return message if last_frag else None
+
+def image_to_jpeg(image_data):
+    try:
+        image = Image.open(io.BytesIO(image_data))
+        f = io.BytesIO()
+        image.save(f, "JPEG")
+    except Exception as e:
+        print(f"[{TAG}] open image error '{e}'")
+        f = None
+    return f
