@@ -4,6 +4,7 @@ import json
 import pyiotown.post_process
 import pyiotown.get
 import pyiotown.delete
+import pyiotown.post
 import redis
 from urllib.parse import urlparse
 import io
@@ -114,7 +115,7 @@ def post_process(message):
     result = pyiotown.get.storage(iotown_url, iotown_token,
                                   message['nid'],
                                   group_id=message['grpid'],
-                                  count=str(1),
+                                  count=1,
                                   verify=False)
     try:
         if result['data'][0]['value']['sense_time'] == sense_time:
@@ -148,9 +149,15 @@ def post_process(message):
 
 
     if offset > offset_next:
-        print(f"[{TAG}] There was packet loss. (nid: {message['nid']}, offset {offset_next} is expected but {offset})")
-        #TODO How can I notify it to the sensor?
-        return message
+        print(f"[{TAG}] There was packet loss. (nid:{message['nid']}, fcnt:{fcnt}, offset {offset_next} is expected but {offset})")
+        frag_req = raw[1:6] + (offset_next).to_bytes(3, byteorder='little', signed=False)
+        pyiotown.post.command(iotown_url, iotown_token,
+                              message['nid'],
+                              frag_req,
+                              lorawan={ 'f_port': 4 },    # fragment request
+                              group_id=message['grpid'],
+                              verify=False)
+        return None
 
     meta_key = f"PP:EdgeEye:meta:{message['nid']}:{epoch}"
     meta = r.get(meta_key)
@@ -191,7 +198,7 @@ def post_process(message):
         r.delete(image_buffer_key)
         r.delete(meta_key)
         r.delete(total_size_key)
-        print(f"[{TAG}] image reassembly completed (nid:{message['nid']}, size:{len(image)})")
+        print(f"[{TAG}] image reassembly completed (nid:{message['nid']}, fcnt:{fcnt}, size:{len(image)})")
     else:
         r.setrange(image_buffer_key, offset, raw[9:])
         offset += len(raw) - 9
@@ -213,14 +220,14 @@ def post_process(message):
         r.expire(image_buffer_key, timedelta(minutes=1))
         r.expire(meta_key, timedelta(minutes=1))
         r.expire(total_size_key, timedelta(minutes=1))
-        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, +{len(raw) - 9} bytes, {offset}/{total_size} ({offset / total_size * 100}))")
+        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, fcnt:{fcnt}, +{len(raw) - 9} bytes, {offset}/{total_size} ({offset / total_size * 100}))")
 
         r.copy(image_buffer_key, rtsp_buffer_key, replace=True)
         r.expire(rtsp_buffer_key, timedelta(hours=24))
 
     if prev_data is not None:
         result = pyiotown.delete.data(iotown_url, iotown_token, _id=prev_data_id, group_id=message['grpid'], verify=False)
-        print(f"[{TAG}] delete prev data _id:${prev_data_id}: {result}")
+        #print(f"[{TAG}] delete prev data _id:${prev_data_id}: {result}")
         
     return message
 
