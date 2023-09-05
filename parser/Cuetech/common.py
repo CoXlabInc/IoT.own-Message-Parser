@@ -7,7 +7,7 @@ def parse_sensor_value(message_type, message_value):
     value = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
     return key, value
 
-  unit = (message_value[0] & 0b01110000) >> 4
+  unit = (message_value[0] & 0b11110000) >> 4
   if unit == 1:
     key += '_V'
   elif unit == 2:
@@ -28,6 +28,10 @@ def parse_sensor_value(message_type, message_value):
     key += '_deg'
   elif unit == 10:
     key += '_mm/h'
+  elif unit == 11:
+    key += '_W/m^2'
+  elif unit == 12:
+    key += '_m^3/h'
 
   status = (message_value[0] & 0b00001100) >> 2
   if status == 0:
@@ -160,6 +164,8 @@ def post_process(message):
           sensor_list.append('1_Temperature')
         elif x == 0xE4:
           sensor_list.append('1_Humidity')
+        elif x == 0xE5:
+          sensor_list.append('Solar Radiation')
 
       message['data']['SensorList'] = sensor_list
     elif message_type == 0xB2:
@@ -304,6 +310,8 @@ def post_process(message):
     elif message_type == 0xE4:
       key, value = parse_sensor_value('1_Humidity', message_value)
       message['data'][key] = value
+    elif message_type == 0xE5:
+      key, value = parse_sensor_value('Solar Radiation', message_value)
     else:
       message['data'][f'UnknownType_0x{message_type:02X}'] = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
     index += (2 + len(message_value))
