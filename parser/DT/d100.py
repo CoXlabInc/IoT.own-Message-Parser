@@ -75,6 +75,19 @@ def post_process(message):
             message['data']['cover_dist_mm'] = int.from_bytes(raw[11:13], 'little', signed=False)
         else:
             print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
+    elif message['meta']['fPort'] == 5:
+        if len(raw) == 23:
+            # Landslide
+            epoch = int.from_bytes(raw[0:5], 'little', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
+            message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
+            message['data']['acc_x'] = int.from_bytes(raw[9:11], 'little', signed=True) / 1024
+            message['data']['acc_y'] = int.from_bytes(raw[11:13], 'little', signed=True) / 1024
+            message['data']['acc_z'] = int.from_bytes(raw[13:15], 'little', signed=True) / 1024
+            # TODO
+        else:
+            print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
     else:
         print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
 
