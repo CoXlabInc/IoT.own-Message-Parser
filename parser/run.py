@@ -7,6 +7,7 @@ import pyiotown.get
 
 import CoXlab
 import Cuetech
+import Dragino
 import DT
 import Honeywell
 import Milesight
@@ -59,6 +60,10 @@ if __name__ == '__main__':
     clients.append(pyiotown.post_process.connect_common(url, 'PLNetworks', PLNetworks.post_process, mqtt_url, dry_run=dry_run))
 
     c = RAKWireless.rak10701.init(url, 'RAK10701', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+
+    c = Dragino.lht65n.init(url, 'Dragino LHT65N', mqtt_url, args.redis_url, dry_run=dry_run)
     if c is not None:
         clients.append(c)
 
