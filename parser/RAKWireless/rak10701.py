@@ -35,6 +35,9 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message):
+    if message['meta'].get('raw') is None:
+        return message
+    
     raw = base64.b64decode(message['meta']['raw'])
 
     fcnt = message["meta"].get("fCnt")
@@ -60,13 +63,15 @@ def post_process(message):
         if hdop >= maxHdop or sats < minSats:
             message['data']['error'] = f"Need more GPS precision (hdop must be < {maxHdop} & sats must be >= {minSats}) current hdop: {hdop} & sats: {sats}"
             
-        message['data']['latitude'] = latSign * (encLat * 108 + 53) / 10000000
-        message['data']['longitude'] = lonSign * (encLon * 215 + 107) / 10000000
-        message['data']['altitude'] = ((raw[6] << 8) + raw[7]) - 1000;
+        message['data']['gnss'] = [
+            latSign * (encLat * 108 + 53) / 10000000,  #latitude
+            lonSign * (encLon * 215 + 107) / 10000000, #longitude
+            ((raw[6] << 8) + raw[7]) - 1000            #altitude
+        ]
         message['data']['accuracy'] = (hdop * 5 + 5) / 10
         message['data']['hdop'] = hdop
         message['data']['sats'] = sats
-        message['data']['location'] = f"({message['data']['latitude']},{message['data']['longitude']})"
+        message['data']['location'] = f"({message['data']['gnss'][0]},{message['data']['gnss'][1]})"
 
         message['data']['minRSSI'] = 0
         message['data']['maxRSSI'] = 0
@@ -91,7 +96,7 @@ def post_process(message):
 
             if gw['location']['latitude'] != 0 or gw['location']['longitude'] != 0 or gw['location']['altitude'] != 0:
                 # Calculate distance
-                new_distance = distance(gw['location']['latitude'], gw['location']['longitude'], message['data']['latitude'], message['data']['longitude'])
+                new_distance = distance(gw['location']['latitude'], gw['location']['longitude'], message['data']['gnss'][0], message['data']['gnss'][1])
                 
                 if new_distance < message['data']['minDistance'] or message['data']['minDistance'] == 0:
                     message['data']['minDistance'] = new_distance * 1000
