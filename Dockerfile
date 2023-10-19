@@ -4,7 +4,7 @@ WORKDIR /root/
 RUN apk add --no-cache nodejs
 RUN python3 -m pip install redis
 RUN python3 -m pip install pillow
-RUN python3 -m pip install pyiotown==0.4.5
+RUN python3 -m pip install pyiotown==0.4.6
 
 COPY ./parser .
 

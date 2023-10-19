@@ -120,8 +120,20 @@ def post_process(message):
         buf[0] = 1
         buf[1] = int(message['data']['minRSSI'] + 200)
         buf[2] = int(message['data']['maxRSSI'] + 200)
-        buf[3] = 1 if message['data']['minMod'] == 0 else message['data']['minMod']
-        buf[4] = 1 if message['data']['maxMod'] == 0 else message['data']['maxMod']
+        if message['data']['minMod'] == 0:
+            buf[3] = 1
+        elif message['data']['minMod'] > 255:
+            buf[3] = 255
+        else:
+            buf[3] = int(message['data']['minMod'])
+
+        if message['data']['maxMod'] == 0:
+            buf[4] = 1
+        elif message['data']['maxMod'] > 255:
+            buf[4] = 255
+        else:
+            buf[4] = int(message['data']['maxMod'])
+            
         buf[5] = len(message['meta']['gateway'])
         pyiotown.post.command(iotown_url, iotown_token,
                               message['nid'],
