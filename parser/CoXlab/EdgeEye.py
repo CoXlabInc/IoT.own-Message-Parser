@@ -56,59 +56,6 @@ def post_process(message):
     if lock != True:
         return None
 
-    #PRR calculation
-    #TODO When should the recent number of frames be initialized to 0?
-    recent_num_frames_key = f"PP:EdgeEye:RecentNumFrames:{message['grpid']}:{message['nid']}"
-    devaddr_key = f"PP:EdgeEye:DevAddr:{message['grpid']}:{message['nid']}"
-    devaddr = r.get(devaddr_key)
-    if devaddr is None or fcnt == 0:
-        # FIXME The sensor can start with empty frames. So it can enters into here with fcnt > 0.
-        result = pyiotown.get.node(iotown_url, iotown_token, message['nid'], group_id=message['grpid'], verify=False)
-        try:
-            devaddr_current = result['node']['lorawan']['session']['devAddr']
-        except Exception as e:
-            print(e)
-            return None
-
-        r.set(devaddr_key, devaddr_current)
-        if devaddr != devaddr_current:
-            print(f"[{TAG}] New session detected")
-            recent_num_frames = None
-        else:
-            recent_num_frames = r.get(recent_num_frames_key)
-    else:
-        recent_num_frames = r.get(recent_num_frames_key)
-
-    if recent_num_frames is None:
-        recent_num_frames = 1
-    elif int(recent_num_frames) < 1000:
-        recent_num_frames = int(recent_num_frames) + 1
-    else:
-        recent_num_frames = 1000
-
-    r.set(recent_num_frames_key, recent_num_frames)
-    
-    recent_fcnts_key = f"PP:EdgeEye:RecentFCnts:{message['grpid']}:{message['nid']}"
-    recent_fcnts = r.smembers(recent_fcnts_key)
-
-    if recent_num_frames <= fcnt:
-        to_be_removed = [item for item in recent_fcnts if int(item) > fcnt or int(item) < fcnt - recent_num_frames]
-    else:
-        to_be_removed = [item for item in recent_fcnts if int(item) > fcnt and int(item) < (65535 - (recent_num_frames - fcnt))] 
-
-    if len(to_be_removed) > 0:
-        p = r.pipeline()
-        for x in to_be_removed:
-            p.srem(recent_fcnts_key, x)
-        p.sadd(recent_fcnts_key, fcnt)
-        p.execute()
-    else:
-        r.sadd(recent_fcnts_key, fcnt)
-
-    recent_fcnts = r.smembers(recent_fcnts_key)
-    prr = len(recent_fcnts) / recent_num_frames
-    print(f"[{TAG}] recent num frames: {recent_num_frames}, To be removed: {to_be_removed}, PRR: {prr} = {len(recent_fcnts)} / {recent_num_frames}")
-
     epoch = int.from_bytes(raw[1:6], 'little', signed=False)
     sense_time = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
 
@@ -145,8 +92,8 @@ def post_process(message):
             total_size = int(total_size)
         else:
             print(f"[{TAG}] GET '{total_size_key}' returned None")
+            offset_next = 0
             total_size = 0
-
 
     if offset > offset_next:
         print(f"[{TAG}] There was packet loss. (nid:{message['nid']}, fcnt:{fcnt}, offset {offset_next} is expected but {offset})")
@@ -220,7 +167,7 @@ def post_process(message):
         r.expire(image_buffer_key, timedelta(minutes=1))
         r.expire(meta_key, timedelta(minutes=1))
         r.expire(total_size_key, timedelta(minutes=1))
-        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, fcnt:{fcnt}, +{len(raw) - 9} bytes, {offset}/{total_size} ({offset / total_size * 100}))")
+        print(f"[{TAG}] image reassembly in progress (nid:{message['nid']}, fcnt:{fcnt}, +{len(raw) - 9} bytes, {offset}/{total_size} ({(offset / total_size * 100) if total_size > 0 else 0}))")
 
         r.copy(image_buffer_key, rtsp_buffer_key, replace=True)
         r.expire(rtsp_buffer_key, timedelta(hours=24))
