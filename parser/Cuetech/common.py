@@ -242,15 +242,23 @@ def post_process(message):
       message['data'][key] = value
     elif message_type == 0xD1:
       key, value = parse_sensor_value('1_DepthToWater', message_value)
+      if value >= 0x8000 and value <= 0xFFFF:
+        value = 0
       message['data'][key] = value
     elif message_type == 0xD2:
       key, value = parse_sensor_value('2_DepthToWater', message_value)
+      if value >= 0x8000 and value <= 0xFFFF:
+        value = 0
       message['data'][key] = value
     elif message_type == 0xD3:
       key, value = parse_sensor_value('3_DepthToWater', message_value)
+      if value >= 0x8000 and value <= 0xFFFF:
+        value = 0
       message['data'][key] = value
     elif message_type == 0xD4:
       key, value = parse_sensor_value('4_DepthToWater', message_value)
+      if value >= 0x8000 and value <= 0xFFFF:
+        value = 0
       message['data'][key] = value
     elif message_type == 0xD5:
       key, value = parse_sensor_value('1_SoilTemperature', message_value)
