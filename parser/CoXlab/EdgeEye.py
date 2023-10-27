@@ -38,6 +38,9 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message):
+    if message['meta'].get('raw') is None:
+        return message
+    
     raw = base64.b64decode(message['meta']['raw'])
 
     #TODO length check
@@ -96,14 +99,18 @@ def post_process(message):
             total_size = 0
 
     if offset > offset_next:
+        result = pyiotown.get.command(iotown_url, iotown_token, message['nid'],
+                                      group_id=message['grpid'], verify=False)
+        command_status = result.get('command')
         print(f"[{TAG}] There was packet loss. (nid:{message['nid']}, fcnt:{fcnt}, offset {offset_next} is expected but {offset})")
-        frag_req = raw[1:6] + (offset_next).to_bytes(3, byteorder='little', signed=False)
-        pyiotown.post.command(iotown_url, iotown_token,
-                              message['nid'],
-                              frag_req,
-                              lorawan={ 'f_port': 4 },    # fragment request
-                              group_id=message['grpid'],
-                              verify=False)
+        if command_status is not None and len(command_status) == 0:            
+            frag_req = raw[1:6] + (offset_next).to_bytes(3, byteorder='little', signed=False)
+            pyiotown.post.command(iotown_url, iotown_token,
+                                  message['nid'],
+                                  frag_req,
+                                  lorawan={ 'f_port': 4 },    # fragment request
+                                  group_id=message['grpid'],
+                                  verify=False)
         return None
 
     meta_key = f"PP:EdgeEye:meta:{message['nid']}:{epoch}"

@@ -328,6 +328,7 @@ def post_process(message):
       message['data'][key] = value
     elif message_type == 0xE5:
       key, value = parse_sensor_value('Solar Radiation', message_value)
+      message['data'][key] = value
     else:
       message['data'][f'UnknownType_0x{message_type:02X}'] = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
     index += (2 + len(message_value))
