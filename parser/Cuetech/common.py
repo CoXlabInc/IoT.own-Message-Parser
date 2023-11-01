@@ -71,7 +71,7 @@ def post_process(message):
   while index < len(raw) - 4:
     message_type = raw[index]
     message_value = raw[(index + 2) : (index + 2 + raw[index + 1])]
-    # print(f"Type:0x{message_type:02X}, Value:0x{' '.join(format(x, '02X') for x in message_value)}")
+    #print(f"Type:0x{message_type:02X}, Value:0x{' '.join(format(x, '02X') for x in message_value)}")
     if message_type == 0xAF:
       if len(message_value) == 1 and message_value[0] == 0x01:
         message['data']['CommErr'] = 'protocol error'
@@ -241,15 +241,31 @@ def post_process(message):
       key, value = parse_sensor_value('H', message_value)
       message['data'][key] = value
     elif message_type == 0xD1:
+      # Workaround for sensor bug
+      value = int.from_bytes(message_value[1:], 'big', signed=False)
+      if value >= 0x8000 and value <= 0xFFFF:
+        message_value = bytearray(len(message_value))
       key, value = parse_sensor_value('1_DepthToWater', message_value)
       message['data'][key] = value
     elif message_type == 0xD2:
+      # Workaround for sensor bug
+      value = int.from_bytes(message_value[1:], 'big', signed=False)
+      if value >= 0x8000 and value <= 0xFFFF:
+        message_value = bytearray(len(message_value))
       key, value = parse_sensor_value('2_DepthToWater', message_value)
       message['data'][key] = value
     elif message_type == 0xD3:
+      # Workaround for sensor bug
+      value = int.from_bytes(message_value[1:], 'big', signed=False)
+      if value >= 0x8000 and value <= 0xFFFF:
+        message_value = bytearray(len(message_value))
       key, value = parse_sensor_value('3_DepthToWater', message_value)
       message['data'][key] = value
     elif message_type == 0xD4:
+      # Workaround for sensor bug
+      value = int.from_bytes(message_value[1:], 'big', signed=False)
+      if value >= 0x8000 and value <= 0xFFFF:
+        message_value = bytearray(len(message_value))
       key, value = parse_sensor_value('4_DepthToWater', message_value)
       message['data'][key] = value
     elif message_type == 0xD5:
@@ -316,5 +332,4 @@ def post_process(message):
       message['data'][f'UnknownType_0x{message_type:02X}'] = 'unknown 0x' + ''.join(format(x, '02X') for x in message_value)
     index += (2 + len(message_value))
 
-  print(message['data'])
   return message
