@@ -1,7 +1,7 @@
 import base64
 from datetime import datetime, timedelta
 
-def post_process(message):
+def post_process(message, param=None):
     if message.get('meta') is None or message['meta'].get('raw') is None or message['meta'].get('fPort') is None:
         print(f'[DT-D100] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]} <= meta:{message.get("meta")})')
         

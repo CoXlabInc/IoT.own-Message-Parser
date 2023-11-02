@@ -37,7 +37,7 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
-def post_process(message):
+def post_process(message, param=None):
     raw = base64.b64decode(message['meta']['raw'])
 
     #TODO length check

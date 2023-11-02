@@ -5,7 +5,7 @@ import subprocess
 
 ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
-def post_process(message):
+def post_process(message, param=None):
     if message.get('meta') is None or message['meta'].get('raw') is None:
         print(f'[PLN] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
         return message
