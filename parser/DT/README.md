@@ -30,9 +30,9 @@ All values are integers with LSB first.
 
 ### Landslide sensor mode (```FPort``` = 5)
 
-|Sense Time|Report Period (sec)|X-axis Acceleration (g)|Y-axis Acceleration (g)|Z-axis Acceleration (g)|Crack Value (mV)|Upper Soil Moisture (%)|Lower Soil Moisture (%)|Soil Temperature (℃)|Latitude (1/10,000,000°)|Longitude (1/10,000,000°)|Altitude (mm)|
+|Sense Time|Report Period (sec)|X-axis Acceleration (1/1024 g)|Y-axis Acceleration (1/1024 g)|Z-axis Acceleration (1/1024 g)|Crack Value (mV)|Upper Soil Moisture (%)|Lower Soil Moisture (%)|Soil Temperature (℃)|Latitude (1/10,000,000°)|Longitude (1/10,000,000°)|Altitude (mm)|
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|5-byte|2-byte|2-byte|2-byte|2-byte|2-byte|Optional 2-byte|Optional 2-byte|Optional 2-byte|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|
+|5-byte|2-byte|2-byte<br>(signed)|2-byte<br>(signed)|2-byte<br>(signed)|2-byte|Optional 2-byte|Optional 2-byte|Optional 2-byte|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|
 
 If the length is 15, there are no optional fields.
 
