@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime, timedelta
+import math
 
 def post_process(message, param=None):
     if message.get('meta') is None or message['meta'].get('raw') is None or message['meta'].get('fPort') is None:
@@ -76,15 +77,29 @@ def post_process(message, param=None):
         else:
             print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
     elif message['meta']['fPort'] == 5:
-        if len(raw) == 23:
+        if len(raw) >= 17:
             # Landslide
             epoch = int.from_bytes(raw[0:5], 'little', signed=False)
             message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
             message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
             message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
-            message['data']['acc_x'] = int.from_bytes(raw[9:11], 'little', signed=True) / 1024
-            message['data']['acc_y'] = int.from_bytes(raw[11:13], 'little', signed=True) / 1024
-            message['data']['acc_z'] = int.from_bytes(raw[13:15], 'little', signed=True) / 1024
+
+            acc_x = int.from_bytes(raw[9:11], 'little', signed=True) / 1024
+            message['data']['acc_x'] = acc_x
+            
+            acc_y = int.from_bytes(raw[11:13], 'little', signed=True) / 1024
+            message['data']['acc_y'] = acc_y
+            
+            acc_z = int.from_bytes(raw[13:15], 'little', signed=True) / 1024
+            message['data']['acc_z'] = acc_z
+            
+            message['data']['crack_mv'] = int.from_bytes(raw[15:17], 'little', signed=False)
+
+            acc_total = math.sqrt(math.pow(acc_x, 2) + math.pow(acc_y, 2) + math.pow(acc_z, 2))
+            
+            message['data']['angle_x'] = math.acos(acc_x / acc_total) * 180 / math.pi
+            message['data']['angle_y'] = math.acos(acc_y / acc_total) * 180 / math.pi
+            message['data']['angle_z'] = math.acos(acc_z / acc_total) * 180 / math.pi
             # TODO
         else:
             print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
