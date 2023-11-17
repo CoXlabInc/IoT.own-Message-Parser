@@ -34,10 +34,10 @@ All values are integers with LSB first.
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 |5-byte|2-byte|2-byte|2-byte<br>(signed)|2-byte<br>(signed)|2-byte<br>(signed)|2-byte|Optional 2-byte|Optional 2-byte|Optional 2-byte|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|Optional 4-byte<br>(signed)|
 
-If the length is 15, there are no optional fields.
+If the length is 17, there are no optional fields.
 
-If the length is 15+6 (21), it includes the soil sensor values (upper / lower soil moisture, and temperature).
+If the length is 17+6 (23), it includes the soil sensor values (upper / lower soil moisture, and temperature).
 
-If the length is 15+12 (27), it includes the GNSS location values (latitude, longitude, and altitue).
+If the length is 17+12 (29), it includes the GNSS location values (latitude, longitude, and altitue).
 
-If the length is 15+6+12 (33), it includes all fields.
+If the length is 17+6+12 (35), it includes all fields.
