@@ -59,7 +59,7 @@ def convert_kelvin_to_degc(key, value):
     pass
   return '_DegC'.join(key.rsplit('_Kelvin', 1)), value
 
-def post_process(message):
+def post_process(message, param=None):
   if message.get('meta') is None or message['meta'].get('raw') is None:
     print(f'[Cuetech] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
     return message

@@ -1,6 +1,6 @@
 import base64
 
-def post_process(message):
+def post_process(message, param=None):
     if message.get('meta') is None or message['meta'].get('raw') is None:
         print(f'[AM300] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
         return message
