@@ -53,6 +53,10 @@ if __name__ == '__main__':
     if c is not None:
         clients.append(c)
 
+    c = CoXlab.aggregator.init(url, 'Aggregator', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+
     c = CoXlab.trilateration.init(url, 'Trilateration', mqtt_url, args.redis_url, dry_run=dry_run)
     if c is not None:
         clients.append(c)
