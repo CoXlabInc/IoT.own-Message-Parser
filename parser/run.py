@@ -10,6 +10,7 @@ import Cuetech
 import Dragino
 import DT
 import Honeywell
+import LightStar
 import Milesight
 import PLNetworks
 import RAKWireless
@@ -64,6 +65,11 @@ if __name__ == '__main__':
     clients.append(pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'DT-D100', DT.d100.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url, dry_run=dry_run))
+
+    c = LightStar.init(url, 'LightStar KDX-300', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+    
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight AM300', Milesight.am300.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM300', Milesight.em300.post_process, mqtt_url, dry_run=dry_run))
     clients.append(pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, mqtt_url, dry_run=dry_run))
