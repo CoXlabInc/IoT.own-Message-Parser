@@ -107,18 +107,18 @@ def post_process(message, param=None):
         if len(raw) == 32:
             # Landslide2
             message['data']['sensor_type'] = raw[0]
-            epoch = int.from_bytes(raw[1:5], 'little', signed=False)
-            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z+09:00'
-            message['data']['bat_voltage'] = int.from_bytes(raw[5:7], 'little', signed=False) / 1000
-            message['data']['angle_x_avg'] = int.from_bytes(raw[9:11], 'little', signed=True)
-            message['data']['angle_y_avg'] = int.from_bytes(raw[11:13], 'little', signed=True)
-            message['data']['angle_z_avg'] = int.from_bytes(raw[13:15], 'little', signed=True)
-            message['data']['angle_x_max'] = int.from_bytes(raw[15:17], 'little', signed=True)
-            message['data']['angle_y_max'] = int.from_bytes(raw[17:19], 'little', signed=True)
-            message['data']['angle_z_max'] = int.from_bytes(raw[19:21], 'little', signed=True)
-            message['data']['angle_x_min'] = int.from_bytes(raw[21:23], 'little', signed=True)
-            message['data']['angle_y_min'] = int.from_bytes(raw[23:25], 'little', signed=True)
-            message['data']['angle_z_min'] = int.from_bytes(raw[25:27], 'little', signed=True)
+            epoch = int.from_bytes(raw[1:5], 'big', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['bat_voltage'] = int.from_bytes(raw[5:7], 'big', signed=False) / 1000
+            message['data']['angle_x_avg'] = int.from_bytes(raw[9:11], 'big', signed=True)
+            message['data']['angle_y_avg'] = int.from_bytes(raw[11:13], 'big', signed=True)
+            message['data']['angle_z_avg'] = int.from_bytes(raw[13:15], 'big', signed=True)
+            message['data']['angle_x_max'] = int.from_bytes(raw[15:17], 'big', signed=True)
+            message['data']['angle_y_max'] = int.from_bytes(raw[17:19], 'big', signed=True)
+            message['data']['angle_z_max'] = int.from_bytes(raw[19:21], 'big', signed=True)
+            message['data']['angle_x_min'] = int.from_bytes(raw[21:23], 'big', signed=True)
+            message['data']['angle_y_min'] = int.from_bytes(raw[23:25], 'big', signed=True)
+            message['data']['angle_z_min'] = int.from_bytes(raw[25:27], 'big', signed=True)
         else:
             print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
     else:
