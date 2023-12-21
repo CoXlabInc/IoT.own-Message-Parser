@@ -31,7 +31,10 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message, param=None):
-    params = json.loads('{' + param + '}')
+    try:
+        params = json.loads('{' + param + '}')
+    except:
+        raise Exception('param format error')
 
     # "id":"aggregator ID","data":{"temperature":"room1_temperature", ...},"timeout":11
     
