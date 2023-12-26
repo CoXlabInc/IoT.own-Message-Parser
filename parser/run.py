@@ -50,11 +50,19 @@ if __name__ == '__main__':
     if c is not None:
         clients.append(c)
 
+    c = CoXlab.csd2.init(url, 'CoXlab CSD2', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+
     c = CoXlab.csd4.init(url, 'CoXlab CSD4', mqtt_url, args.redis_url, dry_run=dry_run)
     if c is not None:
         clients.append(c)
 
     c = CoXlab.aggregator.init(url, 'Aggregator', mqtt_url, args.redis_url, dry_run=dry_run)
+    if c is not None:
+        clients.append(c)
+
+    c = CoXlab.multiplier.init(url, 'Multiplier', mqtt_url, args.redis_url, dry_run=dry_run)
     if c is not None:
         clients.append(c)
 
