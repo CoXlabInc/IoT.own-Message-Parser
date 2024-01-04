@@ -51,6 +51,8 @@ def post_process(message, param=None):
         type = raw[0]
 
         req = f"req{req_index}"
+        resp = f"resp{req_index}"
+        
         if type == 0 or type == 1:
             # Modbus read holding or input registers
             message['data'][req] = 'modbusrh' if type == 0 else 'modbusri'
@@ -59,15 +61,16 @@ def post_process(message, param=None):
             start_addr = int.from_bytes(raw[2:4], 'little', signed=False)
             count = int.from_bytes(raw[4:6], 'little', signed=False)
             message['data'][req] += f",{slave},{start_addr},{count}"
-            message['data'][req + '_time'] = epoch + raw[6]
 
-            if raw[7] == 0:
-                message['data'][f"resp{req_index}"] = None
+            if raw[6] == 0xFF:
+                message['data'][resp + "_time"] = -1
+                message['data'][resp] = None
             else:
-                resp = ''
+                message['data'][resp + "_time"] = epoch + raw[6]
+                v = ''
                 for x in raw[8:8+raw[7]]:
-                    resp += f"{x:02X}"
-                message['data'][f"resp{req_index}"] = resp
+                    v += f"{x:02X}"
+                message['data'][resp] = v
                 
             raw = raw[8+raw[7]:]
         elif type == 2:
@@ -85,6 +88,37 @@ def post_process(message, param=None):
                 message['data'][f"{req}_a{ch}"] = v
                 raw = raw[5:]
                 ch += 1
+        elif type == 3 or type == 4:
+            # SLIP over 232 or 485
+            message['data'][req] = 'slip' + ('232' if type == 3 else '485') + ','
+
+            length = raw[1]
+            raw = raw[2:]
+            
+            for x in raw[:length]:
+                message['data'][req] += f"{x:02X}"
+            raw= raw[length:]
+
+            if raw[0] == 0xFF:
+                message['data'][resp + "_time"] = -1
+                message['data'][resp] = None
+                raw = raw[1:]
+            else:
+                message['data'][resp + "_time"] = epoch + raw[0]
+                raw = raw[1:]
+
+                length = raw[0]
+                raw = raw[1:]
+
+                if length == 0:
+                    v = None
+                else:
+                    v = ''
+                    for x in raw[:length]:
+                        v += f"{x:02X}"
+                    
+                message['data'][resp] = v
+                raw = raw[length:]
         else:
             # Unknown type
             message['data'][req] = None
