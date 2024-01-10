@@ -38,28 +38,48 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message, param=None):
-    if message['meta'].get('raw') is None:
+    raw = message['meta'].get('raw')
+    
+    if raw is None:
         return message
-    raw = base64.b64decode(message['meta']['raw'])
-
-    #TODO length check
-
-    epoch = int.from_bytes(raw[0:5], 'little', signed=False)
-    offset = int.from_bytes(raw[6:8], 'little', signed=False)
-    flags = raw[8]
-    frag = raw[9:]
-    fcnt = message["meta"].get("fCnt")
 
     #MUTEX
-    mutex_key = f"PP:EdgeEye:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
-    
+    mutex_key = f"PP:EdgeEye:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
     lock = r.set(mutex_key, 'lock', ex=30, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
         return None
 
+    message['data']['image'] = None
+    message['data']['error'] = ''
+    message['data']['meta_total'] = []
+    
+    fport = message['meta'].get('fPort')
+    raw = base64.b64decode(raw)
+
+    if fport == 2:
+        # Fail Report
+        if raw[0] == 0:
+            message['data']['error'] = "Snap failed"
+        else:
+            message['data']['error'] = f"Unknown fail ({raw[0]})"
+        return message
+    elif fport != 1:
+        message['data']['error'] = f"Not supported FPort ({fport})"
+        return message
+    
+    #TODO length check
+
+    fcnt = message['meta'].get('fCnt')
+    epoch = int.from_bytes(raw[0:5], 'little', signed=False)
+    offset = int.from_bytes(raw[6:8], 'little', signed=False)
+    flags = raw[8]
+    frag = raw[9:]
+
     epoch = int.from_bytes(raw[1:6], 'little', signed=False)
     sense_time = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+
+    message['data']['sense_time'] = sense_time
 
     result = pyiotown.get.storage(iotown_url, iotown_token,
                                   message['nid'],
@@ -110,6 +130,7 @@ def post_process(message, param=None):
                                   lorawan={ 'f_port': 4 },    # fragment request
                                   group_id=message['grpid'],
                                   verify=False)
+        r.delete(mutex_key)
         return None
 
     meta_key = f"PP:EdgeEye:meta:{message['nid']}:{epoch}"
@@ -122,6 +143,8 @@ def post_process(message, param=None):
     l = message['meta']
     del l['raw']
     meta.append(l)
+
+    message['data']['meta_total'] = meta
     
     image_buffer_key = f"PP:EdgeEye:buffer:{message['nid']}:{epoch}"
     rtsp_buffer_key = f"ImageToRtsp:{message['nid']}:image:buffer"
@@ -145,8 +168,6 @@ def post_process(message, param=None):
                 'file_ext': 'jpeg',
                 'file_size': len(image),
             }
-        message['data']['sense_time'] = sense_time
-        message['data']['meta_total'] = meta
         
         r.delete(image_buffer_key)
         r.delete(meta_key)
@@ -165,8 +186,6 @@ def post_process(message, param=None):
                 'file_ext': 'jpeg',
                 'file_size': len(image),
             }
-        message['data']['sense_time'] = sense_time
-        message['data']['meta_total'] = meta
         message['data']['received'] = offset
 
         r.set(meta_key, json.dumps(meta))
@@ -178,6 +197,8 @@ def post_process(message, param=None):
         r.copy(image_buffer_key, rtsp_buffer_key, replace=True)
         r.expire(rtsp_buffer_key, timedelta(hours=24))
 
+    r.delete(mutex_key)
+    
     if prev_data is not None:
         result = pyiotown.delete.data(iotown_url, iotown_token, _id=prev_data_id, group_id=message['grpid'], verify=False)
         #print(f"[{TAG}] delete prev data _id:${prev_data_id}: {result}")
