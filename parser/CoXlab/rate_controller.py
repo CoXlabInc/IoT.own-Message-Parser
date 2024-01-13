@@ -31,11 +31,16 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message, param=None):
-    if param is None or (type(param) is not int and type(param) is not float):
-        raise Exception('invalid param')
+    if param is None:
+        raise Exception('param not found')
 
-    mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
-    lock = r.set(mutex_key, 'lock', ex=param, nx=True)
+    try:
+        timeout = int(param)
+    except:
+        raise Exception(f"invalid param ({param})")
+
+    mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}"
+    lock = r.set(mutex_key, 'lock', ex=timeout, nx=True)
     if lock != True:
         print(f"[{TAG}] lock failed with '{mutex_key}': {lock}")
         return None
