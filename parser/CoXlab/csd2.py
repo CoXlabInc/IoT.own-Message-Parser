@@ -42,9 +42,28 @@ def post_process(message, param=None):
         return None
 
     epoch = int.from_bytes(raw[0:5], 'little', signed=False)
-    message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
-    message['data']['commands'] = {}
     raw = raw[5:]
+    message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+
+    prev_data_id = None
+    result = pyiotown.get.storage(iotown_url, iotown_token,
+                                  message['nid'],
+                                  group_id=message['grpid'],
+                                  count=1,
+                                  verify=False)
+    try:
+        if result['data'][0]['value']['sense_time'] == message['data']['sense_time']:
+            prev_data_id = result['data'][0]['_id']
+            print(f"[{TAG}] prev: {result}")
+
+            prev_raw = base64.b64decode(result['data'][0]['value']['raw'])[5:]
+            print(f"[{TAG}] prev:{prev_raw} + current:{raw}")
+            
+            raw = prev_raw + raw
+            print(f"[{TAG}] raw:{raw}")
+    except Exception as e:
+        raise e
+
     req_index = 0
     
     while len(raw) > 0:
@@ -126,4 +145,13 @@ def post_process(message, param=None):
         req_index += 1
 
     r.delete(mutex_key)
+
+    if prev_data_id is not None:
+        result = pyiotown.delete.data(iotown_url,
+                                      iotown_token,
+                                      _id=prev_data_id,
+                                      group_id=message['grpid'],
+                                      verify=False)
+        print(f"[{TAG}] remove id({prev_data_id}): {result}")
+
     return message
