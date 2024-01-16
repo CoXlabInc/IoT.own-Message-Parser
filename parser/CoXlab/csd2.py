@@ -53,14 +53,18 @@ def post_process(message, param=None):
                                   verify=False)
     try:
         if result['data'][0]['value']['sense_time'] == message['data']['sense_time']:
-            prev_data_id = result['data'][0]['_id']
-            print(f"[{TAG}] prev: {result}")
+            if raw[0] == 0xFF: # fragment
+                prev_data_id = result['data'][0]['_id']
+                #print(f"[{TAG}] prev: {result}")
 
-            prev_raw = base64.b64decode(result['data'][0]['value']['raw'])[5:]
-            print(f"[{TAG}] prev:{prev_raw} + current:{raw}")
+                prev_raw = base64.b64decode(result['data'][0]['value']['raw'])[5:]
+                #print(f"[{TAG}] prev:{prev_raw} + current:{raw}")
             
-            raw = prev_raw + raw
-            print(f"[{TAG}] raw:{raw}")
+                raw = prev_raw + raw[1:]
+                #print(f"[{TAG}] raw:{raw}")
+            else:
+                print(f"[{TAG}] discard duplicated ({message['data']['sense_time']})")
+                return None
     except Exception as e:
         raise e
 
@@ -152,6 +156,6 @@ def post_process(message, param=None):
                                       _id=prev_data_id,
                                       group_id=message['grpid'],
                                       verify=False)
-        print(f"[{TAG}] remove id({prev_data_id}): {result}")
+        #print(f"[{TAG}] remove id({prev_data_id}): {result}")
 
     return message
