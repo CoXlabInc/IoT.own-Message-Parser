@@ -4,6 +4,7 @@ import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
 import json
+import math
 
 TAG = 'KDX-300'
 
@@ -22,13 +23,12 @@ register_map = [ 'V12', 'V23', 'V31',
                  'A1_max', 'A2_max', 'A3_max',
                  'W_max',
                  'reserved',
-                 'volt_dot,volt_unit',
-                 'curr_dot,reserved',
-                 'watt_dot,watt_unit',
-                 'wh_dot,wh_unit'
-                 'V1_angle', 'V2_angle', 'V3_angle',
-                 'A1_angle', 'A2_angle', 'A3_angle',
-                 'V12_angle', 'V23_angle', 'V31_angle',
+                 'volt_dot_unit,curr_dot',
+                 'watt_dot_unit,wh_dot_unit',
+                 'wh_dot,wh_unit',
+                 'angle_V1', 'angle_V2', 'angle_V3',
+                 'angle_A1', 'angle_A2', 'angle_A3',
+                 'angle_V12', 'angle_V23', 'angle_V31',
                  'V1_THD', 'V2_THD', 'V3_THD',
                  'V1_fund', 'V2_fund', 'V3_fund',
                  'V1_hr2', 'V2_hr2', 'V3_hr2',
@@ -96,6 +96,21 @@ register_map = [ 'V12', 'V23', 'V31',
                  'A1_hr31', 'A2_hr31', 'A3_hr31',
                  'A1_hr32', 'A2_hr32', 'A3_hr32' ]
 
+v_keys = [ 'V12', 'V23', 'V31',
+           'V1', 'V2', 'V3',
+           'V12_max', 'V23_max', 'V31_max',
+           'V1_max', 'V2_max', 'V3_max' ]
+
+c_keys = [ 'A1', 'A2', 'A3',
+           'A1_max', 'A2_max', 'A3_max' ]
+
+w_keys = [ 'W1', 'W2', 'W3', 'W_total',
+           'VAR1', 'VAR2', 'VAR3', 'VAR_total',
+           'W_max' ]
+
+wh_keys = [ 'Wh_p', 'Wh_n',
+            'VARh_p', 'VARh_n' ]
+
 def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     global iotown_url, iotown_token
     
@@ -160,6 +175,14 @@ def post_process(message, param=None):
     if len(resp) != length:
         raise Exception('Length mismatch')
 
+    v_dot = 0
+    v_unit = 0
+    c_dot = 0
+    w_dot = 0
+    w_unit = 0
+    wh_dot = 0
+    wh_unit = 0
+    
     while len(resp) > 0:
         if addr > len(register_map):
             raise Exception('Address out of range')
@@ -170,15 +193,19 @@ def post_process(message, param=None):
             message['data'][f"{param}_{name}"] = int.from_bytes(resp[0:4], 'big', signed=False)
             resp = resp[4:]
             addr += 2
-        elif len(name.split(',')) == 2:
-            names = name.split(',')[0]
-            message['data'][f"{param}_{names[0]}"] = resp[0]
+        elif name == 'volt_dot_unit,curr_dot':
+            v_dot = resp[0] >> 4
+            v_unit = resp[0] & 0x0F
+            c_dot = resp[1] >> 4
+            resp = resp[2:]
             addr += 1
-            resp = resp[1:]
-            
-            if len(resp) >= 1:
-                message['data'][f"{param}_{names[1]}"] = resp[1]
-                resp = resp[1:]
+        elif name == 'watt_dot_unit,wh_dot_unit':
+            w_dot = resp[0] >> 4
+            w_unit = resp[0] & 0x0F
+            wh_dot = resp[1] >> 4
+            wh_unit = resp[1] & 0x0F
+            resp = resp[2:]
+            addr += 1
         elif len(resp) >= 2:
             if name != 'reserved':
                 message['data'][f"{param}_{name}"] = int.from_bytes(resp[0:2], 'big', signed=False)
@@ -186,6 +213,23 @@ def post_process(message, param=None):
             addr += 1
         else:
             raise Exception('Parsing response error')
-        
+
+    for k in message['data'].keys():
+        for v_suffix in v_keys:
+            if k == f"{param}_{v_suffix}":
+                message['data'][k] = message['data'][k] / math.pow(10.0, v_dot) * math.pow(10.0, v_unit * 3)
+
+        for c_suffix in c_keys:
+            if k == f"{param}_{c_suffix}":
+                message['data'][k] /= math.pow(10.0, c_dot)
+
+        for w_suffix in w_keys:
+            if k == f"{param}_{w_suffix}":
+                message['data'][k] = message['data'][k] / math.pow(10.0, w_dot) * math.pow(10.0, w_unit * 3)
+
+        for wh_suffix in wh_keys:
+            if k == f"{param}_{wh_suffix}":
+                message['data'][k] = message['data'][k] / math.pow(10.0, wh_dot) * math.pow(10.0, wh_unit * 3)
+            
     r.delete(mutex_key)
     return message
