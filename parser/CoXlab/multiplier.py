@@ -48,7 +48,13 @@ def post_process(message, param=None):
     mapping = {}
     for k in params.keys():
         if k in message['data'].keys():
-            message['data'][k] *= float(params[k])
+            if type(params[k]) is list:
+                if len(params[k]) >= 2:
+                    message['data'][str(params[k][1])] = message['data'][k] * float(params[k][0])
+                else:
+                    message['data'][k] *= float(params[k][0])
+            else:
+                message['data'][k] *= float(params[k])
 
     r.delete(mutex_key)
     return message

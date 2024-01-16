@@ -37,7 +37,7 @@ def post_process(message, param=None):
         raise Exception('param format error')
 
     for k in params.keys():
-        if type(params[k]) is not list or len(params[k]) != 4:
+        if type(params[k]) is not list or len(params[k]) < 4:
             raise Exception('param format error')
     
     #Data MUTEX
@@ -57,7 +57,12 @@ def post_process(message, param=None):
                 out_max = float(params[k][3])
             
                 original = message['data'][k]
-                message['data'][k] = (original - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+                new_value = (original - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+
+                if len(params[k]) >= 5:
+                    message['data'][str(params[k][4])] = new_value
+                else:
+                    message['data'][k] = new_value
             except:
                 raise Exception(f"param error on for '{k}'")
 
