@@ -49,6 +49,7 @@ if __name__ == '__main__':
     CoXlab.csd2.init(url, 'CoXlab CSD2', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.csd4.init(url, 'CoXlab CSD4', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.aggregator.init(url, 'Aggregator', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
+    CoXlab.mapper.init(url, 'Mapper', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.multiplier.init(url, 'Multiplier', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.rate_controller.init(url, 'RateController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.trilateration.init(url, 'Trilateration', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
