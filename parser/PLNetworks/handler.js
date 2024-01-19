@@ -18,8 +18,9 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
     var out = {};
     out.errors = '';
 
-        var bcnum = 0;
+    var bcnum = 0;
 
+    if(gateway != null && gateway != undefined)
         out.gateway_power = gateway.power;
 
     for (var i = 1; i < data.length; ) {
