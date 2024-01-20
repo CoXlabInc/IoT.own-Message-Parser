@@ -27,7 +27,7 @@ def post_process(message, param=None):
     
 
 if __name__ == '__main__':
-    raw = 'VQABAF4CAKlsGOaWV4yPhsGsR4vDjeaWV4yPhu0Gklsje8IEZGJkZPABXQ=='
+    raw = 'BcwEAgAAZM0VAgACNAADFQIAAjQAAxYCAAI0AAMX'
 
     test_input = '{"data":"' + raw + '","node":{},"gateway":{}}'
     ps.stdin.write(test_input.encode('ascii'))

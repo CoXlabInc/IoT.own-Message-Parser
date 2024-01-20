@@ -3,6 +3,7 @@ var handler = require('./handler.js')
 
 process.stdin.setEncoding('utf-8')
 process.stdout.setEncoding('utf-8')
+process.stderr.setEncoding('utf-8')
 process.stdin.on('readable', () => {
   const input = process.stdin.read()
   if (!!input) {

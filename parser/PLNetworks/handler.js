@@ -1,3 +1,4 @@
+// -*- mode: js; js-indent-level: 4; indent-tabs-mode: nil; -*-
 /*
  * !!! IMPORTANT 1 !!!
  * Must restart IoT.own after implementing a custom handler.
@@ -1810,75 +1811,117 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
 
         } else if (type == 0xC5) {
 
-                let gasTag = new Object();
-                let sensing = new Object();
-                let info = new Object();
-				let mac = new Array( 0x00, 0x13, 0x43, data[i + 2], data[i + 3], data[i + 4]);
-				gasTag.id = toHexString(mac);
-
+            let gasTag = new Object();
+            let sensing = new Object();
+            let info = new Object();
+				    let mac = new Array( 0x00, 0x13, 0x43, data[i + 2], data[i + 3], data[i + 4]);
+				    gasTag.id = mac.readBigUInt64BE(0).toString(16).padStart(12, '0');
 				
-				sensing.LEL = ((data[i + 5] << 8) + data[i + 6])/100;
-				sensing.CO = ((data[i + 7] << 8) + data[i + 8])/100;
-				sensing.H2S = ((data[i + 9] << 8) + data[i + 10])/100;
-				sensing.O2 = ((data[i + 11] << 8) + data[i + 12])/100;
-				sensing.CO2 = ((data[i + 13] << 8) + data[i + 14])/100;
-				sensing.battery = data[i + 16] & 0x7F;
+				    sensing.LEL = ((data[i + 5] << 8) + data[i + 6])/100;
+				    sensing.CO = ((data[i + 7] << 8) + data[i + 8])/100;
+				    sensing.H2S = ((data[i + 9] << 8) + data[i + 10])/100;
+				    sensing.O2 = ((data[i + 11] << 8) + data[i + 12])/100;
+				    sensing.CO2 = ((data[i + 13] << 8) + data[i + 14])/100;
+				    sensing.battery = data[i + 16] & 0x7F;
 
-				info.mandown = data[i + 15];
-				info.sos = (data[i + 16] >> 7) & 0x1;
+				    info.mandown = data[i + 15];
+				    info.sos = (data[i + 16] >> 7) & 0x1;
 
-                gasTag.sensing = sensing;
-                gasTag.info = info;
-                out.gasTag = gasTag;
+            gasTag.sensing = sensing;
+            gasTag.info = info;
+            out.gasTag = gasTag;
 
         } else if (type == 0xC6) {
 
-                let smartBand = new Object();
-                let sensing = new Object();
-				let mac = new Array( 0x04, 0x32, 0xf4, data[i + 2], data[i + 3], data[i + 4]);
-				smartBand.id = toHexString(mac);
+            let smartBand = new Object();
+            let sensing = new Object();
+				    let mac = new Array( 0x04, 0x32, 0xf4, data[i + 2], data[i + 3], data[i + 4]);
+				    smartBand.id = mac.readBigUInt64BE(0).toString(16).padStart(12, '0');
 
-				sensing.heartbeat = data[i + 5];
-				sensing.step = (data[i + 6] << 8) + data[i + 7];
-				sensing.calories = (data[i + 8] << 8) + data[i + 9];
-				sensing.distance = (data[i + 10] << 8) + data[i + 11];
-				sensing.sleep = data[i + 12];
-				sensing.battery = data[i + 13];
+				    sensing.heartbeat = data[i + 5];
+				    sensing.step = (data[i + 6] << 8) + data[i + 7];
+				    sensing.calories = (data[i + 8] << 8) + data[i + 9];
+				    sensing.distance = (data[i + 10] << 8) + data[i + 11];
+				    sensing.sleep = data[i + 12];
+				    sensing.battery = data[i + 13];
 
-                smartBand.sensing = sensing;
-                out.smartBand = smartBand;
+            smartBand.sensing = sensing;
+            out.smartBand = smartBand;
 
         } else if (type == 0xC7) {
 
-                let smartBand = new Object();
-                let sensing = new Object();
-				let mac = new Array( 0x10, 0x20, 0x30, data[i + 2], data[i + 3], data[i + 4]);
-				smartBand.id = toHexString(mac);
+            let smartBand = new Object();
+            let sensing = new Object();
+            let mac = new Array( 0x10, 0x20, 0x30, data[i + 2], data[i + 3], data[i + 4]);
+				    smartBand.id = mac.readBigUInt64BE(0).toString(16).padStart(12, '0');
 
-				sensing.heartbeat = data[i + 5];
-				sensing.step = (data[i + 6] << 8) + data[i + 7];
-				sensing.calories = (data[i + 8] << 8) + data[i + 9];
-				sensing.distance = (data[i + 10] << 8) + data[i + 11];
-				sensing.sleep = data[i + 12];
-				sensing.temperature = (data[i + 13] << 8) + data[i + 14];
+				    sensing.heartbeat = data[i + 5];
+				    sensing.step = (data[i + 6] << 8) + data[i + 7];
+				    sensing.calories = (data[i + 8] << 8) + data[i + 9];
+				    sensing.distance = (data[i + 10] << 8) + data[i + 11];
+				    sensing.sleep = data[i + 12];
+				    sensing.temperature = (data[i + 13] << 8) + data[i + 14];
 
-                smartBand.sensing = sensing;
-                out.smartBand = smartBand;
+            smartBand.sensing = sensing;
+            out.smartBand = smartBand;
 
         } else if (type == 0xC9) {
-                var val = data[i + 2];
-                switch (length)
+            var val = data[i + 2];
+            switch (length)
+            {
+                case 7:
                 {
-                        case 7:
-                        {
-                                var mac = new Array(data[i + 2], data[i + 3], data[i + 4], data[i + 5],
-                                                        data[i + 6], data[i + 7]);
-                                out.beaconMac = toHexString(mac);
-                                out.beaconBatt = data[i + 8];
+                    out.beaconMac = data.slice(i + 2, i + 8).readBigUInt64BE(0).toString(16).padStart(12, '0')
+                    out.beaconBatt = data[i + 8];
+                }
+                break;
+            }
+        } else if (type == 0xCC) {
+            /* PLS200 */
+            out.Status = data[i + 2];
+            out.step = data[i + 3] << 8 + data[i + 4];
+            out.battery = data[i + 5];
+        } else if (type == 0xCD) {
+            /* PLS200 */
+            let scanIndex = 0;
+            let subLength = length;
+
+            let index = i + 2;
+            while (subLength > 0) {
+                let subType = data[index];
+                let result = null;
+                if (subType == 0x05) {
+                    let mac = data.slice(index + 1, index + 7).readBigUInt64BE(0).toString(16).padStart(6, '0');
+                    result = {
+                        mac: {
+                            'batt': data[index + 8]
                         }
-                        break;
+                    };
+
+                    subLength -= 7;
+                    index += 7;
+                } else if (subType >= 0x02 && subType <= 0x04) {
+                    index++;
+                    subLength--;
+                    
+                    result = {}
+                    for (let j = 0; j < subType; j++) {
+                        let eui = data.slice(index, index + 2).readUInt16BE(0).toString(16).padStart(4, '0');
+                        result[eui] = {
+                                'distance': (data[index + 2] >> 3) + ((data[index + 2] & 0b00000111) * 0.125)
+                        };
+                        subLength -= 3;
+                        index += 3;
+                    }
+                } else {
+                    result = `error: unknown subtype`;
+                    index += 1;
+                    subLength -= 1;
                 }
 
+                out[`scan_${scanIndex}`] = result;
+                scanIndex++;
+            }
         } else if (type == 0xF0) {
             out.battery = data[i + 2];
 
