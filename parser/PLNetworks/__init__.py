@@ -1,1 +1,1 @@
-from .common import post_process
+from .common import init

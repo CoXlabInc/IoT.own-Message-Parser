@@ -62,7 +62,7 @@ if __name__ == '__main__':
     pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'PLNetworks', PLNetworks.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    PLNetworks.init(url, 'PLNetworks', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     RAKWireless.rak10701.init(url, 'RAK10701', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     Dragino.lht65n.init(url, 'Dragino LHT65N', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     Rootech.accura3300e.init(url, 'Rootech Accura3300e', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()

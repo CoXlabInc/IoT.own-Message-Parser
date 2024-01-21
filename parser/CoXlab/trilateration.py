@@ -1,4 +1,5 @@
 import base64
+import json
 import pyiotown.get
 import pyiotown.post_process
 import redis
@@ -30,7 +31,20 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
         raise(e)
     
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
-    
+
+def get_anchors(obj):
+    anchors = []
+    for k in obj.keys():
+        try:
+            x = float(obj[k]['x'])
+            y = float(obj[k]['y'])
+            z = float(obj[k]['z'])
+            dist = float(obj[k]['dist'])
+            anchors.append([x, y, z, dist])
+        except:
+            pass
+    return anchors
+
 def post_process(message, param=None):
     raw = message['meta'].get('raw')
     if raw is None:
@@ -47,80 +61,84 @@ def post_process(message, param=None):
     if lock != True:
         return None
 
-    #TODO Separate the below parsing part into the other PP.
-    message['data']['anchors'] = {}
-
-    while len(raw) >= 10:
-        id = f"{int.from_bytes(raw[0:8], 'little', signed=False):0{16}x}"
-        dist = int.from_bytes(raw[8:10], 'little', signed=True)
-        dist = dist / 100 if dist >= 0 else dist
-        message['data']['anchors'][id] = {
-            'dist': dist
-        }
-
-        result = pyiotown.get.node(iotown_url, iotown_token, f"LW{id}",
-                                   group_id=message['grpid'], verify=False)
-        try:
-            pos = result['node']['node_desc'].split(',')
-            message['data']['anchors'][id]['x'] = float(pos[0])
-            message['data']['anchors'][id]['y'] = float(pos[1])
-            message['data']['anchors'][id]['z'] = float(pos[2])
-        except Exception as e:
-            print(result)
-            print(e)
-
-        raw = raw[10:]
-
-    #Trilerateration
-    distances = []
-    for a in message['data']['anchors'].keys():
-        anchor = message['data']['anchors'][a]
-        if anchor['dist'] >= 0:
-            distances.append([anchor['x'], anchor['y'], anchor['z'], anchor['dist']])
-
-    i = 0
-    for d in list(itertools.combinations(distances, 4)):
-        try:
-            calculated = trilaterate3D(d)
-            print(f"[{TAG}] {d} => {calculated}")
-        except Exception as e:
-            print(e)
-
-        message['data'][f'estimated_3d{i}_x'] = None if np.isnan(calculated[0]) else calculated[0]
-        message['data'][f'estimated_3d{i}_y'] = None if np.isnan(calculated[1]) else calculated[1]
-        message['data'][f'estimated_3d{i}_z'] = None if np.isnan(calculated[2]) else calculated[2]
-        i += 1
-
-    i = 0
-
-    x_2d = []
-    y_2d = []
+    obj = message['data']
     
-    for d in list(itertools.combinations(distances, 3)):
-        try:
-            calculated = trilaterate2D(d)
-            print(f"[{TAG}] {d} => {calculated}")
-        except Exception as e:
-            print(e)
+    if param is None:
+        raise Exception('Keys must be specified in the param')
 
-        if np.isnan(calculated[0]):
-            message['data'][f'estimated_2d{i}_x'] = None
-        else:
-            message['data'][f'estimated_2d{i}_x'] = calculated[0]
-            x_2d.append(calculated[0])
+    try:
+        param = '{"keys":[' + param + ']}'
+        param = json.loads(param)
+        keys = param['keys']
+    except:
+        raise Exception(f"param error ({param})")
 
-        if np.isnan(calculated[1]):
-            message['data'][f'estimated_2d{i}_y'] = None
-        else:
-            message['data'][f'estimated_2d{i}_y'] = calculated[1]
-            y_2d.append(calculated[1])
+    for k in keys:
+        ranging_set = message['data'].get(k)
+        message['data'][f'{k}_estimated_3d_x'] = None
+        message['data'][f'{k}_estimated_3d_y'] = None
+        message['data'][f'{k}_estimated_3d_z'] = None
+        message['data'][f'{k}_estimated_2d_x'] = None
+        message['data'][f'{k}_estimated_2d_y'] = None
 
-        i += 1
+        if ranging_set is None:
+            continue
 
-    if len(x_2d) > 0 and len(y_2d) > 0:
-        message['data']['estimated_2d_x'] = np.mean(x_2d)
-        message['data']['estimated_2d_y'] = np.mean(y_2d)
+        distances = get_anchors(ranging_set)
+        if len(distances) < 3:
+            continue
 
+        i = 0
+        x_3d = []
+        y_3d = []
+        z_3d = []
+        for d in list(itertools.combinations(distances, 4)):
+            try:
+                calculated = trilaterate3D(d)
+                print(f"[{TAG}] {d} => {calculated}")
+            except Exception as e:
+                print(e)
+
+            if np.isnan(calculated[0]) == False:
+                x_3d.append(calculated[0])
+                
+            if np.isnan(calculated[1]) == False:
+                y_3d.append(calculated[1])
+
+            if np.isnan(calculated[2]) == False:
+                z_3d.append(calculated[2])
+                
+            i += 1
+
+        if len(x_3d) > 0 and len(y_3d) > 0 and len(z_3d) > 0:
+            message['data'][f'{k}_estimated_3d_x'] = np.mean(x_2d)
+            message['data'][f'{k}_estimated_3d_y'] = np.mean(y_2d)
+            message['data'][f'{k}_estimated_3d_z'] = np.mean(z_2d)
+
+        i = 0
+        x_2d = []
+        y_2d = []
+    
+        for d in list(itertools.combinations(distances, 3)):
+            try:
+                calculated = trilaterate2D(d)
+                print(f"[{TAG}] {d} => {calculated}")
+            except Exception as e:
+                print(e)
+
+            if np.isnan(calculated[0]) == False:
+                x_2d.append(calculated[0])
+
+            if np.isnan(calculated[1]) == False:
+                y_2d.append(calculated[1])
+
+            i += 1
+
+        if len(x_2d) > 0 and len(y_2d) > 0:
+            message['data'][f'{k}_estimated_2d_x'] = np.mean(x_2d)
+            message['data'][f'{k}_estimated_2d_y'] = np.mean(y_2d)
+
+    r.delete(mutex_key)
     return message
 
 def trilaterate3D(distances):

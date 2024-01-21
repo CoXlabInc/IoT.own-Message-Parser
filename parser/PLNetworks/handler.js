@@ -1893,6 +1893,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 if (subType == 0x05) {
                     let mac = data.slice(index + 1, index + 7).readBigUInt64BE(0).toString(16).padStart(6, '0');
                     result = {
+                        'method': 'BLE',
                         mac: {
                             'batt': data[index + 8]
                         }
@@ -1904,11 +1905,13 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                     index++;
                     subLength--;
                     
-                    result = {}
+                    result = {
+                        'method': 'UWB',
+                    }
                     for (let j = 0; j < subType; j++) {
                         let eui = data.slice(index, index + 2).readUInt16BE(0).toString(16).padStart(4, '0');
                         result[eui] = {
-                                'distance': (data[index + 2] >> 3) + ((data[index + 2] & 0b00000111) * 0.125)
+                                'dist': (data[index + 2] >> 3) + ((data[index + 2] & 0b00000111) * 0.125)
                         };
                         subLength -= 3;
                         index += 3;
