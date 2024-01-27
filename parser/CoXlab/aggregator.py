@@ -60,7 +60,7 @@ def post_process(message, param=None):
 
     mapping = {}
     for k in data.keys():
-        mapping[data[k]] = message['data'][k]
+        mapping[data[k]] = message['data'].get(k)
         
     hash_key = f"PP:{TAG}:Data:{message['grpid']}:{id}"
     r.hset(hash_key, mapping=mapping)
