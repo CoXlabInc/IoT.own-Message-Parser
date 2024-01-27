@@ -111,9 +111,9 @@ def post_process(message, param=None):
             i += 1
 
         if len(x_3d) > 0 and len(y_3d) > 0 and len(z_3d) > 0:
-            message['data'][f'{k}_estimated_3d_x'] = np.mean(x_2d)
-            message['data'][f'{k}_estimated_3d_y'] = np.mean(y_2d)
-            message['data'][f'{k}_estimated_3d_z'] = np.mean(z_2d)
+            message['data'][f'{k}_estimated_3d_x'] = np.mean(x_3d)
+            message['data'][f'{k}_estimated_3d_y'] = np.mean(y_3d)
+            message['data'][f'{k}_estimated_3d_z'] = np.mean(z_3d)
 
         i = 0
         x_2d = []
