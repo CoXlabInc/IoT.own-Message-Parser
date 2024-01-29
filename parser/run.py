@@ -53,6 +53,7 @@ if __name__ == '__main__':
     CoXlab.multiplier.init(url, 'Multiplier', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.rate_controller.init(url, 'RateController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.trilateration.init(url, 'Trilateration', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
+    CoXlab.to_number.init(url, 'ToNumber', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(url, 'DT-D100', DT.d100.post_process, mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url, dry_run=dry_run).loop_start()
