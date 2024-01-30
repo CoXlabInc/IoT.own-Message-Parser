@@ -50,7 +50,7 @@ def post_process(message, param=None):
     params = json.loads('{' + param + '}')
 
     for k in params.keys():
-        if len(params[k]) < 6:
+        if len(params[k]) < 5:
             r.delete(mutex_key)
             raise Exception(f"The length of '{k}' ({len(params[k])}) must be grater than or equal to 5.")
 

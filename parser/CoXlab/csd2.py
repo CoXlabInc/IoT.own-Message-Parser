@@ -54,14 +54,16 @@ def post_process(message, param=None):
     try:
         if result['data'][0]['value']['sense_time'] == message['data']['sense_time']:
             if raw[0] == 0xFF: # fragment
-                prev_data_id = result['data'][0]['_id']
-                #print(f"[{TAG}] prev: {result}")
-
                 prev_raw = base64.b64decode(result['data'][0]['value']['raw'])
-                raw = prev_raw + raw[1:]
-
-                message['meta']['raw'] = base64.b64encode(raw).decode('ascii')
-                raw = raw[5:]
+                next_raw = raw[1:]
+                if prev_raw[-len(next_raw):] == next_raw:
+                    print(f"[{TAG}] discard duplicate (last block)")
+                    return None
+                else:
+                    prev_data_id = result['data'][0]['_id']
+                    raw = prev_raw + next_raw
+                    message['meta']['raw'] = base64.b64encode(raw).decode('ascii')
+                    raw = raw[5:]
             else:
                 print(f"[{TAG}] discard duplicated ({message['data']['sense_time']})")
                 return None

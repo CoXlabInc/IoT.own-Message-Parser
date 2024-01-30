@@ -60,10 +60,13 @@ def post_process(message, param=None):
 
     mapping = {}
     for k in data.keys():
-        mapping[data[k]] = message['data'].get(k)
-        
-    hash_key = f"PP:{TAG}:Data:{message['grpid']}:{id}"
-    r.hset(hash_key, mapping=mapping)
+        v = message['data'].get(k)
+        if v is not None:
+            mapping[data[k]] = v
+
+    if len(mapping.keys()) > 0:
+        hash_key = f"PP:{TAG}:Data:{message['grpid']}:{id}"
+        r.hset(hash_key, mapping=mapping)
 
     #Report MUTEX
     report_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{id}"
