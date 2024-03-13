@@ -15,7 +15,7 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     iotown_token = url_parsed.password
     
     if redis_url is None:
-        print(f"Redis is required for EdgeEye.")
+        print(f"Redis is required for {TAG}.")
         return None
 
     global r

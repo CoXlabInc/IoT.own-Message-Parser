@@ -45,7 +45,6 @@ if __name__ == '__main__':
         dry_run = True
         print("DRY RUNNING!")
 
-    CoXlab.EdgeEye.init(url, 'EdgeEye', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.csd2.init(url, 'CoXlab CSD2', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.csd4.init(url, 'CoXlab CSD4', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     CoXlab.aggregator.init(url, 'Aggregator', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
