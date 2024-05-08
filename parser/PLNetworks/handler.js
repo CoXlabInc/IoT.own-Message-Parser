@@ -1891,26 +1891,20 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 let subType = data[index];
                 let result = null;
                 if (subType == 0x05) {
-                    let mac = data.slice(index + 1, index + 7).readBigUInt64BE(0).toString(16).padStart(6, '0');
-                    result = {
-                        'method': 'BLE',
-                        mac: {
-                            'batt': data[index + 8]
-                        }
-                    };
-
+                    out[`beacon${scanIndex}Mac`] = data.slice(index + 1, index + 7).readBigUInt64BE(0).toString(16).padStart(6, '0');
+                    out[`beacon${scanIndex}Batt`] = data[index + 8];
+                    
                     subLength -= 7;
                     index += 7;
-                } else if (subType >= 0x02 && subType <= 0x04) {
+                } else if (subType >= 0x01 && subType <= 0x04) {
                     index++;
                     subLength--;
-                    
-                    result = {
-                        'method': 'UWB',
-                    }
+
+                    let keyName = `uwb${scanIndex}`;
+                    out[keyName] = {};
                     for (let j = 0; j < subType; j++) {
                         let eui = data.slice(index, index + 2).readUInt16BE(0).toString(16).padStart(4, '0');
-                        result[eui] = {
+                        out[keyName][eui] = {
                                 'dist': (data[index + 2] >> 3) + ((data[index + 2] & 0b00000111) * 0.125)
                         };
                         subLength -= 3;
@@ -1922,7 +1916,6 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                     subLength -= 1;
                 }
 
-                out[`scan_${scanIndex}`] = result;
                 scanIndex++;
             }
         } else if (type == 0xF0) {
