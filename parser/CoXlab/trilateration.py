@@ -38,20 +38,18 @@ def get_anchors(obj):
         try:
             x = float(obj[k]['x'])
             y = float(obj[k]['y'])
-            z = float(obj[k]['z'])
+            z = obj[k].get('z')
             dist = float(obj[k]['dist'])
-            anchors.append([x, y, z, dist])
+            
+            if z is not None:
+                anchors.append([ x, y, float(z), dist ])
+            else:
+                anchors.append([ x, y, dist ])
         except:
             pass
     return anchors
 
 def post_process(message, param=None):
-    raw = message['meta'].get('raw')
-    if raw is None:
-        return message
-    
-    raw = base64.b64decode(raw)
-
     #MUTEX
     fcnt = message["meta"].get("fCnt")
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
@@ -85,9 +83,28 @@ def post_process(message, param=None):
             continue
 
         distances = get_anchors(ranging_set)
-        if len(distances) < 3:
+        print(f"[{TAG}] # of available anchors: {len(distances)}")
+        if len(distances) == 0:
             continue
 
+        if len(distances) == 1:
+            if len(distances[0]) == 4:
+                message['data'][f'{k}_estimated_3d_x'] = distances[0][0]
+                message['data'][f'{k}_estimated_3d_y'] = distances[0][1]
+                message['data'][f'{k}_estimated_3d_z'] = distances[0][2]
+            message['data'][f'{k}_estimated_2d_x'] = distances[0][0]
+            message['data'][f'{k}_estimated_2d_y'] = distances[0][1]
+            continue
+
+        if len(distances) == 2:
+            if len(distances[0]) == 4 and len(distances[1]) == 4:
+                message['data'][f'{k}_estimated_3d_x'] = (distances[0][0] + distances[1][0]) / 2  # TODO apply bias
+                message['data'][f'{k}_estimated_3d_y'] = (distances[0][1] + distances[1][1]) / 2  # TODO apply bias
+                message['data'][f'{k}_estimated_3d_z'] = (distances[0][2] + distances[1][2]) / 2  # TODO apply bias
+            message['data'][f'{k}_estimated_2d_x'] = (distances[0][0] + distances[1][0]) / 2      # TODO apply bias
+            message['data'][f'{k}_estimated_2d_y'] = (distances[0][1] + distances[1][1]) / 2      # TODO apply bias
+            continue
+        
         i = 0
         x_3d = []
         y_3d = []
