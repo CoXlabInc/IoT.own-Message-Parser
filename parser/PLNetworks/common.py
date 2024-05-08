@@ -88,26 +88,44 @@ def post_process(message, param=None):
     	message['data'][key] = result_dict[key]
 
     for key in message['data']:
-        if key.startswith('scan_') and message['data'][key].get('method') == 'UWB':
-            for anchor in message['data'][key].keys():
-                if anchor == 'method':
-                    continue
-                result = pyiotown.get.node(iotown_url, iotown_token,
-                                           f"LW112211221133{anchor}",
-                                           group_id=message['grpid'],
-                                           verify=False)
-                try:
-                    pos = result['node']['node_desc'].split(',')
-                    x = float(pos[0])
-                    y = float(pos[1])
-                    z = float(pos[2])
-                    message['data'][key][anchor]['x'] = x
-                    message['data'][key][anchor]['y'] = y
-                    message['data'][key][anchor]['z'] = z
-                except Exception as e:
-                    print(e, file=sys.stderr)
-                    pass
-                    
+        if key.startswith('uwb'):
+            anchors = message['data'][key].copy().keys()
+            for anchor in anchors:
+                def get_anchor_desc(anchor_id):
+                    result = pyiotown.get.node(iotown_url, iotown_token,
+                                               anchor_id,
+                                               group_id=message['grpid'],
+                                               verify=False)
+                    try:
+                        return json.loads('{' + result['node']['node_desc'] + '}')
+                    except Exception as e:
+                        if result is not None:
+                            print(f"[PLN] {e}", file=sys.stderr)
+                        return None
+
+                anchor_id = f'LW140C5BFFFFAA{anchor.upper()}'
+                anchor_desc = get_anchor_desc(anchor_id)
+                if anchor_desc is None:
+                    print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
+                    anchor_id = f'LW140C5BEFFFAA{anchor.upper()}'
+                    anchor_desc = get_anchor_desc(anchor_id)
+
+                if anchor_desc is None:
+                    print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
+                elif anchor_desc.get('installed') == False:
+                    print(f"[PLN] {anchor_id} is not installed. (nid:{message['nid']})")
+                elif anchor_desc.get('coord') is None:
+                    print(f"[PLN] {anchor_id} coordinate is not specified. (nid:{message['nid']})")
+                else:
+                    coord = anchor_desc.get('xy_coord')
+                    message['data'][key][anchor_id] = {
+                        'coord': anchor_desc.get('coord'),
+                        'x': float(coord[0]),
+                        'y': float(coord[1]),
+                        'floor': anchor_desc.get('floor'),
+                        'dist': message['data'][key][anchor].get('dist')
+                    }
+                    del message['data'][key][anchor]
     r.delete(mutex_key)
     return message
 
