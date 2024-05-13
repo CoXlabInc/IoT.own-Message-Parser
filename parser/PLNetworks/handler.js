@@ -2000,13 +2000,13 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 let subType = data[index];
                 let result = null;
                 if (subType == 0x05) {
-                    out[`beacon${scanIndex}Mac`] = Buffer.concat([data.slice(index + 1, index + 7),
-                                                                  Buffer.from([0, 0])])
+                    out[`beacon${scanIndex}Mac`] = Buffer.concat([Buffer.from([ 0, 0 ]),
+                                                                  data.slice(index + 1, index + 7)])
                         .readBigUInt64BE(0).toString(16).padStart(6, '0');
-                    out[`beacon${scanIndex}Batt`] = data[index + 8];
+                    out[`beacon${scanIndex}Batt`] = data[index + 7];
                     
-                    subLength -= 7;
-                    index += 7;
+                    subLength -= 8;
+                    index += 8;
                 } else if (subType >= 0x01 && subType <= 0x04) {
                     index++;
                     subLength--;
