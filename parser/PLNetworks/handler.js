@@ -2002,7 +2002,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 if (subType == 0x05) {
                     out[`beacon${scanIndex}Mac`] = Buffer.concat([Buffer.from([ 0, 0 ]),
                                                                   data.slice(index + 1, index + 7)])
-                        .readBigUInt64BE(0).toString(16).padStart(6, '0');
+                        .readBigUInt64BE(0).toString(16).padStart(12, '0');
                     out[`beacon${scanIndex}Batt`] = data[index + 7];
                     
                     subLength -= 8;
