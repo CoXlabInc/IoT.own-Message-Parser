@@ -112,10 +112,13 @@ def post_process(message, param=None):
 
                 if anchor_desc is None:
                     print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
+                    del message['data'][key][anchor]
                 elif anchor_desc.get('installed') == False:
                     print(f"[PLN] {anchor_id} is not installed. (nid:{message['nid']})")
+                    del message['data'][key][anchor]
                 elif anchor_desc.get('coord') is None:
                     print(f"[PLN] {anchor_id} coordinate is not specified. (nid:{message['nid']})")
+                    del message['data'][key][anchor]
                 else:
                     coord = anchor_desc.get('xy_coord')
                     message['data'][key][anchor_id] = {
