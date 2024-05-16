@@ -1992,7 +1992,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
             out.battery = data[i + 5];
         } else if (type == 0xCD) {
             /* PLS200 */
-            let scanIndex = 0;
+            let scanIndex = 1;
             let subLength = length;
 
             let index = i + 2;
