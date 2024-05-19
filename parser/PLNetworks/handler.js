@@ -1988,7 +1988,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 break;
 
             out.Status = data[i + 2];
-            out.step = (data[i + 3] << 8) + data[i + 4];
+            out.step1 = (data[i + 3] << 8) + data[i + 4];
             out.battery = data[i + 5];
         } else if (type == 0xCD) {
             /* PLS200 */
