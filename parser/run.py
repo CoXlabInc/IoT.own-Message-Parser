@@ -20,8 +20,29 @@ import UniAi
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-url = None
-dry_run = False
+def main(iotown_url, mqtt_url, redis_url, dry_run):
+    CoXlab.csd2.init(iotown_url, 'CoXlab CSD2', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.csd4.init(iotown_url, 'CoXlab CSD4', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.aggregator.init(iotown_url, 'Aggregator', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.mapper.init(iotown_url, 'Mapper', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.multiplier.init(iotown_url, 'Multiplier', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.rate_controller.init(iotown_url, 'RateController', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.trilateration.init(iotown_url, 'Trilateration', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    CoXlab.to_number.init(iotown_url, 'ToNumber', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Cuetech', Cuetech.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'DT-D100', DT.d100.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    LightStar.init(iotown_url, 'LightStar KDX-300', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Milesight AM300', Milesight.am300.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Milesight EM300', Milesight.em300.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    pyiotown.post_process.connect_common(iotown_url, 'Milesight EM500', Milesight.em500.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    PLNetworks.init(iotown_url, 'PLNetworks', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    RAKWireless.rak10701.init(iotown_url, 'RAK10701', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    Dragino.lht65n.init(iotown_url, 'Dragino LHT65N', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    Rootech.accura3300e.init(iotown_url, 'Rootech Accura3300e', mqtt_url, redis_url, dry_run=dry_run).loop_start()
+    UniAi.init(iotown_url, 'UniAi', mqtt_url, redis_url, dry_run=dry_run).loop_forever()
 
 if __name__ == '__main__':
     app_desc = "IoT.own Post Process to Parse Messages from Various Sensors"
@@ -44,26 +65,7 @@ if __name__ == '__main__':
     if args.dry == 1:
         dry_run = True
         print("DRY RUNNING!")
+    else:
+        dry_run = False
 
-    CoXlab.csd2.init(url, 'CoXlab CSD2', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.csd4.init(url, 'CoXlab CSD4', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.aggregator.init(url, 'Aggregator', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.mapper.init(url, 'Mapper', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.multiplier.init(url, 'Multiplier', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.rate_controller.init(url, 'RateController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.trilateration.init(url, 'Trilateration', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    CoXlab.to_number.init(url, 'ToNumber', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Cuetech', Cuetech.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'DT-D100', DT.d100.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    LightStar.init(url, 'LightStar KDX-300', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Milesight AM300', Milesight.am300.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Milesight EM300', Milesight.em300.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Milesight EM310-TILT', Milesight.em310_tilt.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Milesight EM310-UDL', Milesight.em310_udl.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    pyiotown.post_process.connect_common(url, 'Milesight EM500', Milesight.em500.post_process, mqtt_url, dry_run=dry_run).loop_start()
-    PLNetworks.init(url, 'PLNetworks', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    RAKWireless.rak10701.init(url, 'RAK10701', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    Dragino.lht65n.init(url, 'Dragino LHT65N', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    Rootech.accura3300e.init(url, 'Rootech Accura3300e', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
-    UniAi.init(url, 'UniAi', mqtt_url, args.redis_url, dry_run=dry_run).loop_forever()
+    main(url, mqtt_url, args.redis_url, dry_run)
