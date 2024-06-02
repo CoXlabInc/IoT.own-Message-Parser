@@ -9,6 +9,7 @@ import CoXlab
 import Cuetech
 import Dragino
 import DT
+import EPEVER
 import Honeywell
 import LightStar
 import Milesight
@@ -31,6 +32,7 @@ def main(iotown_url, mqtt_url, redis_url, dry_run):
     CoXlab.to_number.init(iotown_url, 'ToNumber', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Cuetech', Cuetech.post_process, mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'DT-D100', DT.d100.post_process, mqtt_url, dry_run=dry_run).loop_start()
+    EPEVER.init(url, 'EPEVER ChargeController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url, dry_run=dry_run).loop_start()
     LightStar.init(iotown_url, 'LightStar KDX-300', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Milesight AM300', Milesight.am300.post_process, mqtt_url, dry_run=dry_run).loop_start()
