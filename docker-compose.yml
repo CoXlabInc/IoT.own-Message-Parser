@@ -1,5 +1,3 @@
-version: '3'
-
 services:
   iotown_message_parser:
     image: iotown_message_parser
