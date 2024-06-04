@@ -235,11 +235,15 @@ def post_process(message, param=None):
         req = message['data'].get(f'req{index}')
 
         resp = message['data'].get(f'resp{index}')
+
+        data[f'req{index}'] = req
+        data[f'resp{index}'] = resp
         
         if req is None:
-            r.delete(mutex_key)
-            raise Exception(f"No 'req{index}' found")
+            message['pp_warning'] += f",'req{index}' not found"
+            continue
         if resp is None:
+            message['pp_warning'] += f",'resp{index}' not found"
             continue
 
         try:
@@ -269,4 +273,7 @@ def post_process(message, param=None):
 
     message['data'] = data
     r.delete(mutex_key)
+
+    if len(message['pp_warning']) > 0:
+        message['pp_warning'] = message['pp_warning'][1:] # remove the first comma
     return message
