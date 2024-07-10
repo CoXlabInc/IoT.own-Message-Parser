@@ -2045,11 +2045,13 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 let sign = data[i + 4] & (1 << 7);
                 if(sign)
                 {
-                    out.floor = 'B' + (0xFF - data[i + 4] + 1);
+                    //out.floor = 'B' + (0xFF - data[i + 4] + 1);
+		    out.floor = (0xFFFFFF00 | data[i + 4]);
                 }
                 else
                 {
-                    out.floor = 'F' + val;
+                    //out.floor = 'F' + val;
+		    out.floor = data[i + 4];
                 }
             }
             else if (length == 9)
@@ -2060,18 +2062,20 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 let sign = data[i + 4] & (1 << 7);
                 if(sign)
                 {
-                    out.floor = 'B' + (0xFF - data[i + 4] + 1);
+                    //out.floor = 'B' + (0xFF - data[i + 4] + 1);
+		    out.floor = (0xFFFFFF00 | data[i + 4]);
                 }
                 else
                 {
-                    out.floor = 'F' + data[i + 4];
+                    //out.floor = 'F' + data[i + 4];
+		    out.floor = data[i + 4];
                 }
                 val = data[i + 5];
                 if(val == 0)
                     out.opmode ="Normal";
                 else if(val == 1)
                     out.opmode ="Test";
-                else if(val == 2)
+                else if(val == 3)
                     out.opmode ="Configuration";
                 else 
                     out.opmode ="Unknown";
