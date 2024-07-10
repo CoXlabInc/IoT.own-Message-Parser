@@ -103,11 +103,11 @@ def post_process(message, param=None):
                             print(f"[PLN] {e}", file=sys.stderr)
                         return None
 
-                anchor_id = f'LW140C5BFFFFAA{anchor.upper()}'
+                anchor_id = f'LW140C5BFFFF{anchor.upper()}'
                 anchor_desc = get_anchor_desc(anchor_id)
                 if anchor_desc is None:
                     print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
-                    anchor_id = f'LW140C5BEFFFAA{anchor.upper()}'
+                    anchor_id = f'LW140C5BEFFF{anchor.upper()}'
                     anchor_desc = get_anchor_desc(anchor_id)
 
                 if anchor_desc is None:

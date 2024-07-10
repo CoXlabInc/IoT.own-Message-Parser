@@ -2014,12 +2014,14 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                     let keyName = `uwb${scanIndex}`;
                     out[keyName] = {};
                     for (let j = 0; j < subType; j++) {
-                        let eui = data.slice(index, index + 2).readUInt16BE(0).toString(16).padStart(4, '0');
+                        let eui = Buffer.concat([Buffer.from([ 0 ]),
+                                                 data.slice(index, index + 3)])
+                            .readUInt32BE(0).toString(16).padStart(6, '0');
                         out[keyName][eui] = {
-                            'dist': (data[index + 2] >> 3) + ((data[index + 2] & 0b00000111) * 0.125)
+                            'dist': (data[index + 3] >> 3) + ((data[index + 3] & 0b00000111) * 0.125)
                         };
-                        subLength -= 3;
-                        index += 3;
+                        subLength -= 4;
+                        index += 4;
                     }
                 } else {
                     result = `error: unknown subtype`;
