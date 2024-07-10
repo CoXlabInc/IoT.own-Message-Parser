@@ -40,7 +40,13 @@ def add_data(data, address, value):
     elif address == 0x3102:
         data['pv_array_input_power_W_L'] = value / 100
     elif address == 0x3103:
-        data['pv_array_input_power_W_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('pv_array_input_power_W_L')
+        if val_l is not None:
+            data['pv_array_input_power_W'] = val_h + val_l
+            del data['pv_array_input_power_W_L']
+        else:
+            data['pv_array_input_power_W_H'] = val_h
     elif address == 0x310C:
         data['load_voltage_V'] = value / 100
     elif address == 0x310D:
@@ -48,7 +54,13 @@ def add_data(data, address, value):
     elif address == 0x310E:
         data['load_power_W_L'] = value / 100
     elif address == 0x310F:
-        data['load_power_W_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('load_power_W_L')
+        if val_l is not None:
+            data['load_power_W'] = val_h + val_l
+            del data['load_power_W_L']
+        else:
+            data['load_power_W_H'] = val_h
     elif address == 0x3110:
         data['battery_temperature_DegC'] = value / 100
     elif address == 0x3111:
@@ -68,7 +80,7 @@ def add_data(data, address, value):
             status += ',Over Discharge'
         elif d3_0 == 4:
             status += ',Fault'
-        d7_4 = (value & 0x00F0) >> 8
+        d7_4 = (value >> 4) & 0b1111
         if d7_4 == 1:
             status += ',Over Temp'
         elif d7_4 == 2:
@@ -90,7 +102,7 @@ def add_data(data, address, value):
             status = 'Running'
         if value & (1 << 1) != 0:
             status += ',Fault'
-        d3_2 = value & (0b11 << 2)
+        d3_2 = (value >> 2) & 0b11
         if d3_2 == 0:
             status += ',No Charging'
         elif d3_2 == 1:
@@ -117,7 +129,7 @@ def add_data(data, address, value):
             status += ',Charging or Anti-reverse MOSFET is Open Circuit'
         if value & (1 << 13) != 0:
             status += ',Charging MOSFET is Short Circuit'
-        d15_14 = value & (0b11 << 14)
+        d15_14 = (value >> 14) & 0b11
         if d15_14 == 1:
             status += ',No Input Power Connected'
         elif d15_14 == 2:
@@ -149,7 +161,7 @@ def add_data(data, address, value):
             status += ',Unable to Discharge'
         if value & (1 << 11) != 0:
             status += ',Short Circuit'
-        d13_12 = value & (0b11 << 12)
+        d13_12 = (value >> 12) & 0b11
         if d13_12 == 0:
             status += ',Light Load'
         elif d3_2 == 1:
@@ -158,7 +170,7 @@ def add_data(data, address, value):
             status += ',Rated'
         elif d3_2 == 3:
             status += ',Overload'
-        d15_14 = value & (0b11 << 14)
+        d15_14 = (value >> 14) & 0b11
         if d15_14 == 1:
             status += ',Input Voltage Low'
         elif d15_14 == 2:
@@ -174,41 +186,95 @@ def add_data(data, address, value):
     elif address == 0x3304:
         data['consumed_energy_today_kWh_L'] = value / 100
     elif address == 0x3305:
-        data['consumed_energy_today_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('consumed_energy_today_kWh_L')
+        if val_l is not None:
+            data['consumed_energy_today_kWh'] = val_h + val_l
+            del data['consumed_energy_today_kWh_L']
+        else:
+            data['consumed_energy_today_kWh_H'] = val_h
     elif address == 0x3306:
         data['consumed_energy_month_kWh_L'] = value / 100
     elif address == 0x3307:
-        data['consumed_energy_month_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('consumed_energy_month_kWh_L')
+        if val_l is not None:
+            data['consumed_energy_month_kWh'] = val_h + val_l
+            del data['consumed_energy_month_kWh_L']
+        else:
+            data['consumed_energy_month_kWh_H'] = val_h
     elif address == 0x3308:
         data['consumed_energy_year_kWh_L'] = value / 100
     elif address == 0x3309:
-        data['consumed_energy_year_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('consumed_energy_year_kWh_L')
+        if val_l is not None:
+            data['consumed_energy_year_kWh'] = val_h + val_l
+            del data['consumed_energy_year_kWh_L']
+        else:
+            data['consumed_energy_year_kWh_H'] = val_h
     elif address == 0x330A:
         data['consumed_energy_total_kWh_L'] = value / 100
     elif address == 0x330B:
-        data['consumed_energy_total_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('consumed_energy_total_kWh_L')
+        if val_l is not None:
+            data['consumed_energy_total_kWh'] = val_h + val_l
+            del data['consumed_energy_total_kWh_L']
+        else:
+            data['consumed_energy_total_kWh_H'] = val_h
     elif address == 0x330C:
         data['generated_energy_today_kWh_L'] = value / 100
     elif address == 0x330D:
-        data['generated_energy_today_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('generated_energy_today_kWh_L')
+        if val_l is not None:
+            data['generated_energy_today_kWh'] = val_h + val_l
+            del data['generated_energy_today_kWh_L']
+        else:
+            data['generated_energy_today_kWh_H'] = val_h
     elif address == 0x330E:
-        data['generated_energy_month_kWh_L'] = value / 100
+        data['generated_energy_today_kWh_L'] = value / 100
     elif address == 0x330F:
-        data['generated_energy_month_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('generated_energy_today_kWh_L')
+        if val_l is not None:
+            data['generated_energy_today_kWh'] = val_h + val_l
+            del data['generated_energy_today_kWh_L']
+        else:
+            data['generated_energy_today_kWh_H'] = val_h
     elif address == 0x3310:
         data['generated_energy_year_kWh_L'] = value / 100
     elif address == 0x3311:
-        data['generated_energy_year_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('generated_energy_year_kWh_L')
+        if val_l is not None:
+            data['generated_energy_year_kWh'] = val_h + val_l
+            del data['generated_energy_year_kWh_L']
+        else:
+            data['generated_energy_year_kWh_H'] = val_h
     elif address == 0x3312:
         data['generated_energy_total_kWh_L'] = value / 100
     elif address == 0x3313:
-        data['generated_energy_total_kWh_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('generated_energy_total_kWh_L')
+        if val_l is not None:
+            data['generated_energy_total_kWh'] = val_h + val_l
+            del data['generated_energy_total_kWh_L']
+        else:
+            data['generated_energy_total_kWh_H'] = val_h
     elif address == 0x331A:
         data['battery_voltage_V'] = value / 100
     elif address == 0x331B:
         data['battery_current_A_L'] = value / 100
     elif address == 0x331C:
-        data['battery_current_A_H'] = value / 100
+        val_h = (value << 16) / 100
+        val_l = data.get('battery_current_A_L')
+        if val_l is not None:
+            data['battery_current_A'] = val_h + val_l
+            del data['battery_current_A_L']
+        else:
+            data['battery_current_A_H'] = val_h
 
 def post_process(message, param=None):
     #Data MUTEX
@@ -266,7 +332,7 @@ def post_process(message, param=None):
                 add_data(data, register_addr + i, (resp[i // 8] >> (i % 8)) & 1)
         elif command_type == 'modbusri':
             for i in range(count):
-                add_data(data, register_addr + i, int.from_bytes(resp[(i*2):(i*2) + 2], 'big', signed=False))
+                add_data(data, register_addr + i, int.from_bytes(resp[(i*2):(i*2) + 2], 'big', signed=True))
         else:
             r.delete(mutex_key)
             raise Exception("Unsupported function '{req_blocks[0]}'")
