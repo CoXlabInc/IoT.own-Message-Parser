@@ -5,12 +5,14 @@ import json
 import pyiotown.get
 import pyiotown.post_process
 import subprocess
-import redis
+import redis.asyncio as redis
 from urllib.parse import urlparse
+import asyncio
+import threading
 
 TAG = 'PLN'
 
-ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     global iotown_url, iotown_token
@@ -23,25 +25,34 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
         print(f"Redis is required for {TAG}.")
         return None
 
+    pool = redis.ConnectionPool.from_url(redis_url)
     global r
-    
-    try:
-        r = redis.from_url(redis_url)
-        if r.ping() == False:
-            r = None
-            raise Exception('Redis connection failed')
-    except Exception as e:
-        raise(e)
+    r = redis.Redis.from_pool(pool)
 
+    global event_loop
+    event_loop = asyncio.new_event_loop()
+
+    def event_loop_thread():
+        event_loop.run_forever()
+    threading.Thread(target=event_loop_thread, daemon=True).start()
+    
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
 
-def post_process(message, param=None):
-    if message.get('meta') is None or message['meta'].get('raw') is None:
-        print(f'[PLN] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
-        return message
+def append_error(message, error):
+    if error is None or len(error) == 0:
+        return
+    
+    if message['data'].get('errors') is None:
+        message['data']['errors'] = ''
 
+    if len(message['data']['errors']) > 0:
+        message['data']['errors'] += '\n'
+
+    message['data']['errors'] += error
+    
+async def async_post_process(message):
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
-    lock = r.set(mutex_key, 'lock', ex=10, nx=True)
+    lock = await r.set(mutex_key, 'lock', ex=10, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
         return None
@@ -50,25 +61,23 @@ def post_process(message, param=None):
     if raw[0] >= 0 and raw[0] <= 15:
         # Filter out duplicate
         seq_key = f"PP:{TAG}:SEQ:{message['grpid']}:{message['nid']}:{message['key']}"
-        seq_last = r.get(seq_key)
+        seq_last = await r.get(seq_key)
 
         if seq_last is None:
             # check from DB
-            result = pyiotown.get.storage(iotown_url, iotown_token,
-                                          message['nid'],
-                                          group_id=message['grpid'],
-                                          count=1,
-                                          verify=False)
-            try:
-                seq_last = result['data'][0]['value']['seq']
-            except:
-                pass
+            result = await pyiotown.get.async_storage(iotown_url, iotown_token,
+                                                      message['nid'],
+                                                      group_id=message['grpid'],
+                                                      count=1,
+                                                      verify=False)
+            if result[0] == True:
+                seq_last = result[1]['data'][0]['value']['seq']
         else:
             seq_last = int(seq_last)
 
-        r.set(seq_key, raw[0], ex=3600*24)
+        await r.set(seq_key, raw[0], ex=3600*24)
         if raw[0] != 0 and seq_last == raw[0]:
-            r.delete(mutex_key)
+            await r.delete(mutex_key)
             return None
         
         message['data']['seq'] = raw[0]
@@ -77,11 +86,13 @@ def post_process(message, param=None):
                    "node": message['device'],
                    "gateway": message['gateway'] }
 
+    print(f"Input:{input_data}")
     ps.stdin.write(json.dumps(input_data).encode('ascii'))
     ps.stdin.flush()
     
     result = ps.stdout.readline()
-    # print(result)
+    print(f"Output:{result.decode('utf-8')}")#
+    print(f"Error:{ps.stderr.readline().decode('utf-8')}")
     
     result_dict = json.loads(result)
     for key in result_dict.keys():
@@ -96,11 +107,14 @@ def post_process(message, param=None):
                                                anchor_id,
                                                group_id=message['grpid'],
                                                verify=False)
-                    try:
-                        return json.loads('{' + result['node']['node_desc'] + '}')
-                    except Exception as e:
-                        if result is not None:
-                            print(f"[PLN] {e}", file=sys.stderr)
+                    if result[0] == True:
+                        try:
+                            return json.loads('{' + result[1]['node_desc'] + '}')
+                        except Exception as e:
+                            print(f"[PLN] exception: {e}", file=sys.stderr)
+                            return None
+                    else:
+                        print(f"[PLN] error: {result[1]}", file=sys.stderr)
                         return None
 
                 anchor_id = f'LW140C5BFFFF{anchor.upper()}'
@@ -112,12 +126,15 @@ def post_process(message, param=None):
 
                 if anchor_desc is None:
                     print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
+                    append_error(message, f"'{anchor}' is not found.")
                     del message['data'][key][anchor]
                 elif anchor_desc.get('installed') == False:
                     print(f"[PLN] {anchor_id} is not installed. (nid:{message['nid']})")
+                    append_error(message, f"'{anchor_id}' is not installed.")
                     del message['data'][key][anchor]
                 elif anchor_desc.get('coord') is None:
                     print(f"[PLN] {anchor_id} coordinate is not specified. (nid:{message['nid']})")
+                    append_error(message, f"'{anchor_id}' coordinate is not specified.")
                     del message['data'][key][anchor]
                 else:
                     coord = anchor_desc.get('xy_coord')
@@ -129,8 +146,15 @@ def post_process(message, param=None):
                         'dist': message['data'][key][anchor].get('dist')
                     }
                     del message['data'][key][anchor]
-    r.delete(mutex_key)
+    await r.delete(mutex_key)
     return message
+
+def post_process(message, param=None):
+    if message.get('meta') is None or message['meta'].get('raw') is None:
+        print(f'[PLN] A message have no meta.raw from Group ID:{message["grpid"]}, Node ID:{message["nid"]}')
+        return message
+
+    return asyncio.run_coroutine_threadsafe(async_post_process(message), event_loop)
 
 if __name__ == '__main__':
     raw = 'BcwEAgAAZM0VAgACNAADFQIAAjQAAxYCAAI0AAMX'
