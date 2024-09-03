@@ -114,7 +114,8 @@ def post_process(message, param=None):
                 calculated = trilaterate3D(d)
                 print(f"[{TAG}] {d} => {calculated}")
             except Exception as e:
-                print(e)
+                print(f"[{TAG}] {d} => {e}!!")
+                continue
 
             if np.isnan(calculated[0]) == False:
                 x_3d.append(calculated[0])
@@ -141,7 +142,8 @@ def post_process(message, param=None):
                 calculated = trilaterate2D(d)
                 print(f"[{TAG}] {d} => {calculated}")
             except Exception as e:
-                print(e)
+                print(f"[{TAG}] {d} => {e}!!")
+                continue
 
             if np.isnan(calculated[0]) == False:
                 x_2d.append(calculated[0])

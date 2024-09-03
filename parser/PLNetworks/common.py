@@ -71,7 +71,7 @@ async def async_post_process(message):
                                                       count=1,
                                                       verify=False)
             if result[0] == True:
-                seq_last = result[1]['data'][0]['value']['seq']
+                seq_last = result[1]['data'][0]['value'].get('seq')
         else:
             seq_last = int(seq_last)
 
