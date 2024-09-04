@@ -70,8 +70,8 @@ async def async_post_process(message):
                                                       group_id=message['grpid'],
                                                       count=1,
                                                       verify=False)
-            if result[0] == True:
-                seq_last = result[1]['data'][0]['value'].get('seq')
+            if result[0] == True and len(result[1]['data']) > 0:
+                seq_last = result[1]['data'][0]['value']['seq']
         else:
             seq_last = int(seq_last)
 
