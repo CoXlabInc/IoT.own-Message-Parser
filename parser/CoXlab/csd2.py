@@ -1,10 +1,14 @@
 import base64
 from datetime import datetime, timedelta
 import pyiotown.post_process
-import redis
+import pyiotown.get
+import pyiotown.delete
+import redis.asyncio as redis
 from urllib.parse import urlparse
 import json
 import struct
+import asyncio
+import threading
 
 TAG = 'CSD2'
 
@@ -18,25 +22,26 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     if redis_url is None:
         print(f"Redis is required for {TAG}.")
         return None
+    pool = redis.ConnectionPool.from_url(redis_url)
 
     global r
-    
-    try:
-        r = redis.from_url(redis_url)
-        if r.ping() == False:
-            r = None
-            raise Exception('Redis connection failed')
-    except Exception as e:
-        raise(e)
-    
+    r = redis.Redis.from_pool(pool)
+
+    global event_loop
+    event_loop = asyncio.new_event_loop()
+
+    def event_loop_thread():
+        event_loop.run_forever()
+    threading.Thread(target=event_loop_thread, daemon=True).start()
+
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
-def post_process(message, param=None):
+async def async_post_process(message, param):
     raw = base64.b64decode(message['meta']['raw'])
 
     #MUTEX
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
-    lock = r.set(mutex_key, 'lock', ex=30, nx=True)
+    lock = await r.set(mutex_key, 'lock', ex=30, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
         return None
@@ -46,29 +51,28 @@ def post_process(message, param=None):
     message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
 
     prev_data_id = None
-    result = pyiotown.get.storage(iotown_url, iotown_token,
-                                  message['nid'],
-                                  group_id=message['grpid'],
-                                  count=1,
-                                  verify=False)
-    try:
-        if result['data'][0]['value']['sense_time'] == message['data']['sense_time']:
+    result = await pyiotown.get.async_storage(iotown_url, iotown_token,
+                                              message['nid'],
+                                              group_id=message['grpid'],
+                                              count=1,
+                                              verify=False)
+    if result[0] == True and len(result[1]['data']) > 0:
+        value = result[1]['data'][0]['value']
+        if value.get('sense_time') == message['data']['sense_time']:
             if raw[0] == 0xFF: # fragment
-                prev_raw = base64.b64decode(result['data'][0]['value']['raw'])
+                prev_raw = base64.b64decode(value['raw'])
                 next_raw = raw[1:]
                 if prev_raw[-len(next_raw):] == next_raw:
                     print(f"[{TAG}] discard duplicate (last block)")
                     return None
                 else:
-                    prev_data_id = result['data'][0]['_id']
+                    prev_data_id = result[1]['data'][0]['_id']
                     raw = prev_raw + next_raw
                     message['meta']['raw'] = base64.b64encode(raw).decode('ascii')
                     raw = raw[5:]
             else:
                 print(f"[{TAG}] discard duplicated ({message['data']['sense_time']})")
                 return None
-    except Exception as e:
-        raise e
 
     print(f"[{TAG}] raw:{raw}")
 
@@ -170,14 +174,17 @@ def post_process(message, param=None):
     except:
         print(f"[{TAG}] maybe truncated")
         pass
-    r.delete(mutex_key)
+    await r.delete(mutex_key)
 
     if prev_data_id is not None:
-        result = pyiotown.delete.data(iotown_url,
-                                      iotown_token,
-                                      _id=prev_data_id,
-                                      group_id=message['grpid'],
-                                      verify=False)
+        result = await pyiotown.delete.async_data(iotown_url,
+                                                  iotown_token,
+                                                  _id=prev_data_id,
+                                                  group_id=message['grpid'],
+                                                  verify=False)
         #print(f"[{TAG}] remove id({prev_data_id}): {result}")
 
     return message
+
+def post_process(message, param=None):
+    return asyncio.run_coroutine_threadsafe(async_post_process(message, param), event_loop)
