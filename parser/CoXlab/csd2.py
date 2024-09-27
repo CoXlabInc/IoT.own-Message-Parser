@@ -99,16 +99,17 @@ async def async_post_process(message, param):
                 if raw[6] == 0xFF:
                     message['data'][resp + "_time"] = -1
                     message['data'][resp] = None
+                    raw = raw[7:]
                 else:
                     message['data'][resp + "_time"] = epoch + raw[6]
                     v = ''
                     for x in raw[8:8+raw[7]]:
                         v += f"{x:02X}"
                     message['data'][resp] = v
+                    raw = raw[8+raw[7]:]
                 
                 print(f"[{TAG}] resp:{message['data'][resp]}")
                 
-                raw = raw[8+raw[7]:]
             elif type == 2:
                 # Analog
                 message['data'][req] = 'analog'
@@ -187,4 +188,7 @@ async def async_post_process(message, param):
     return message
 
 def post_process(message, param=None):
-    return asyncio.run_coroutine_threadsafe(async_post_process(message, param), event_loop)
+    if message['meta']['fPort'] == 1:
+        return asyncio.run_coroutine_threadsafe(async_post_process(message, param), event_loop)
+    else:
+        return message
