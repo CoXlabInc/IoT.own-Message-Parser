@@ -16,7 +16,6 @@ import Milesight
 import PLNetworks
 import RAKWireless
 import Rootech
-import UniAi
 
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -43,8 +42,7 @@ def main(iotown_url, mqtt_url, redis_url, dry_run):
     PLNetworks.init(iotown_url, 'PLNetworks', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     RAKWireless.rak10701.init(iotown_url, 'RAK10701', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     Dragino.lht65n.init(iotown_url, 'Dragino LHT65N', mqtt_url, redis_url, dry_run=dry_run).loop_start()
-    Rootech.accura3300e.init(iotown_url, 'Rootech Accura3300e', mqtt_url, redis_url, dry_run=dry_run).loop_start()
-    UniAi.init(iotown_url, 'UniAi', mqtt_url, redis_url, dry_run=dry_run).loop_forever()
+    Rootech.accura3300e.init(iotown_url, 'Rootech Accura3300e', mqtt_url, redis_url, dry_run=dry_run).loop_forever()
 
 if __name__ == '__main__':
     app_desc = "IoT.own Post Process to Parse Messages from Various Sensors"
