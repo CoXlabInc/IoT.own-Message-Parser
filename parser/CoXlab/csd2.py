@@ -101,7 +101,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = None
                     raw = raw[7:]
                 else:
-                    message['data'][resp + "_time"] = epoch + raw[6]
+                    message['data'][resp + "_time"] = datetime.utcfromtimestamp(epoch + raw[6]).isoformat() + 'Z'
                     v = ''
                     for x in raw[8:8+raw[7]]:
                         v += f"{x:02X}"
@@ -122,9 +122,9 @@ async def async_post_process(message, param):
 
                 raw = raw[3:]
                 for x in range(count):
-                    message['data'][f"{req}_a{ch}_time"] = epoch + raw[0]
+                    message['data'][f"{resp}_a{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
                     v = struct.unpack('<f', raw[1:5])[0]
-                    message['data'][f"{req}_a{ch}"] = v
+                    message['data'][f"{resp}_a{ch}"] = v
                     print(f"[{TAG}] resp:{v}")
 
                     raw = raw[5:]
@@ -150,7 +150,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = None
                     raw = raw[1:]
                 else:
-                    message['data'][resp + "_time"] = epoch + raw[0]
+                    message['data'][resp + "_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
                     raw = raw[1:]
 
                     length = raw[0]
