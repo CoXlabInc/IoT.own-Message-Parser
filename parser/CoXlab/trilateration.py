@@ -9,27 +9,18 @@ import itertools
 
 TAG = 'Trilateration'
 
-def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
+def init(url, pp_name, mqtt_url, r, dry_run=False):
     global iotown_url, iotown_token
     
     url_parsed = urlparse(url)
     iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")
     iotown_token = url_parsed.password
-    
+
+    redis_url = r
     if redis_url is None:
         print(f"Redis is required for {TAG}.")
         return None
 
-    global r
-    
-    try:
-        r = redis.from_url(redis_url)
-        if r.ping() == False:
-            r = None
-            raise Exception('Redis connection failed')
-    except Exception as e:
-        raise(e)
-    
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
 
 def get_anchors(obj):
@@ -50,6 +41,8 @@ def get_anchors(obj):
     return anchors
 
 def post_process(message, param=None):
+    r = redis.from_url(redis_url)
+
     #MUTEX
     fcnt = message["meta"].get("fCnt")
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{fcnt}"
@@ -57,11 +50,13 @@ def post_process(message, param=None):
     lock = r.set(mutex_key, 'lock', ex=30, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
+        r.close()
         return None
 
     obj = message['data']
     
     if param is None:
+        r.close()
         raise Exception('Keys must be specified in the param')
 
     try:
@@ -69,6 +64,7 @@ def post_process(message, param=None):
         param = json.loads(param)
         keys = param['keys']
     except:
+        r.close()
         raise Exception(f"param error ({param})")
 
     for k in keys:
@@ -158,6 +154,7 @@ def post_process(message, param=None):
             message['data'][f'{k}_estimated_2d_y'] = np.mean(y_2d)
 
     r.delete(mutex_key)
+    r.close()
     return message
 
 def trilaterate3D(distances):

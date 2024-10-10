@@ -111,48 +111,45 @@ w_keys = [ 'W1', 'W2', 'W3', 'W_total',
 wh_keys = [ 'Wh_p', 'Wh_n',
             'VARh_p', 'VARh_n' ]
 
-def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
-    global iotown_url, iotown_token
+def init(url, pp_name, mqtt_url, r, dry_run=False):
+    global iotown_url, iotown_token, redis_url
     
     url_parsed = urlparse(url)
     iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")
     iotown_token = url_parsed.password
-    
+
+    redis_url = r
     if redis_url is None:
         print(f"Redis is required for {TAG}.")
         return None
-
-    global r
-    
-    try:
-        r = redis.from_url(redis_url)
-        if r.ping() == False:
-            r = None
-            raise Exception('Redis connection failed')
-    except Exception as e:
-        raise(e)
 
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
     
 def post_process(message, param=None):
     #Data MUTEX
+    r = redis.from_url(redis_url)
+    
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
     lock = r.set(mutex_key, 'lock', ex=60, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
+        r.close()
         return None
 
     commands = message['data'].get('commands')
     if commands is None or type(commands) is not dict:
+        r.close()
         raise Exception('No commands object')
 
     if param not in commands.keys():
+        r.close()
         raise Exception('No req specified')
 
     req = commands[param].get('req')
     resp = commands[param].get('resp')
     
     if req is None or type(req) is not str or req.startswith('modbusri,') == False:
+        r.close()
         raise Exception('Parsing request error')
 
     req = req.split(',')
@@ -162,17 +159,21 @@ def post_process(message, param=None):
         addr = int(req[2])
         length = int(req[3]) * 2
     except Exception:
+        r.close()
         raise Exception('Parsing request error')
     
     if resp is None or type(resp) is not str:
+        r.close()
         raise Exception('Parsing response error')
 
     try:
         resp = bytes.fromhex(resp)
     except Exception:
+        r.close()
         raise Exception('Parsing response error')
         
     if len(resp) != length:
+        r.close()
         raise Exception('Length mismatch')
 
     v_dot = 0
@@ -185,6 +186,7 @@ def post_process(message, param=None):
     
     while len(resp) > 0:
         if addr > len(register_map):
+            r.close()
             raise Exception('Address out of range')
 
         name = register_map[addr]
@@ -212,6 +214,7 @@ def post_process(message, param=None):
             resp = resp[2:]
             addr += 1
         else:
+            r.close()
             raise Exception('Parsing response error')
 
     for k in message['data'].keys():
@@ -232,4 +235,5 @@ def post_process(message, param=None):
                 message['data'][k] = message['data'][k] / math.pow(10.0, wh_dot) * math.pow(10.0, wh_unit * 3)
             
     r.delete(mutex_key)
+    r.close()
     return message

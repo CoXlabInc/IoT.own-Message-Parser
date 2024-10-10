@@ -8,23 +8,17 @@ import math
 
 TAG = 'EPEVER Charge Controller'
 
-def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
-    global iotown_url, iotown_token
+def init(url, pp_name, mqtt_url, r, dry_run=False):
+    global iotown_url, iotown_token, redis_url
     
     url_parsed = urlparse(url)
     iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")
     iotown_token = url_parsed.password
-    
+
+    redis_url = r
     if redis_url is None:
         print(f"Redis is required for {TAG}.")
         return None
-
-    global r
-    
-    r = redis.from_url(redis_url)
-    if r.ping() == False:
-        r = None
-        raise Exception('Redis connection failed')
 
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
 
@@ -277,15 +271,19 @@ def add_data(data, address, value):
             data['battery_current_A_H'] = val_h
 
 def post_process(message, param=None):
+    r = redis.from_url(redis_url)
+
     #Data MUTEX
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
     lock = r.set(mutex_key, 'lock', ex=60, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
+        r.close()
         return None
 
     if param is None or type(param) is not str:
         r.delete(mutex_key)
+        r.close()
         raise Exception("Valid param is required")
     
     params = []
@@ -293,6 +291,7 @@ def post_process(message, param=None):
         params = json.loads('[' + param + ']')
     except Exception as e:
         r.delete(mutex_key)
+        r.close()
         raise e
 
     data = {}
@@ -325,6 +324,7 @@ def post_process(message, param=None):
             resp = bytes.fromhex(resp)
         except Exception as e:
             r.delete(mutex_key)
+            r.close()
             raise Exception("Invalid response format")
         
         if command_type == 'modbusrd':
@@ -335,10 +335,12 @@ def post_process(message, param=None):
                 add_data(data, register_addr + i, int.from_bytes(resp[(i*2):(i*2) + 2], 'big', signed=True))
         else:
             r.delete(mutex_key)
+            r.close()
             raise Exception("Unsupported function '{req_blocks[0]}'")
 
     message['data'] = data
     r.delete(mutex_key)
+    r.close()
 
     if len(message['pp_warning']) > 0:
         message['pp_warning'] = message['pp_warning'][1:] # remove the first comma

@@ -25,9 +25,8 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
         print(f"Redis is required for {TAG}.")
         return None
 
+    global pool
     pool = redis.ConnectionPool.from_url(redis_url)
-    global r
-    r = redis.Redis.from_pool(pool)
 
     global event_loop
     event_loop = asyncio.new_event_loop()
@@ -52,9 +51,13 @@ def append_error(message, error):
     
 async def async_post_process(message):
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
+
+    r = redis.Redis.from_pool(pool)
+
     lock = await r.set(mutex_key, 'lock', ex=10, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
+        await r.aclose()
         return None
 
     raw = base64.b64decode(message['meta']['raw'])
@@ -78,6 +81,7 @@ async def async_post_process(message):
         await r.set(seq_key, raw[0], ex=3600*24)
         if raw[0] != 0 and seq_last == raw[0]:
             await r.delete(mutex_key)
+            await r.aclose()
             return None
         
         message['data']['seq'] = raw[0]
@@ -112,9 +116,11 @@ async def async_post_process(message):
                             return json.loads('{' + result[1]['node_desc'] + '}')
                         except Exception as e:
                             print(f"[PLN] exception: {e}", file=sys.stderr)
+                            await r.aclose()
                             return None
                     else:
                         print(f"[PLN] error: {result[1]}", file=sys.stderr)
+                        await r.aclose()
                         return None
 
                 anchor_id = f'LW140C5BFFFF{anchor.upper()}'
@@ -147,6 +153,7 @@ async def async_post_process(message):
                     }
                     del message['data'][key][anchor]
     await r.delete(mutex_key)
+    await r.aclose()
     return message
 
 def post_process(message, param=None):

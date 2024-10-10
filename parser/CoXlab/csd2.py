@@ -22,10 +22,9 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     if redis_url is None:
         print(f"Redis is required for {TAG}.")
         return None
-    pool = redis.ConnectionPool.from_url(redis_url)
 
-    global r
-    r = redis.Redis.from_pool(pool)
+    global pool
+    pool = redis.ConnectionPool.from_url(redis_url)
 
     global event_loop
     event_loop = asyncio.new_event_loop()
@@ -38,12 +37,15 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     
 async def async_post_process(message, param):
     raw = base64.b64decode(message['meta']['raw'])
+    
+    r = redis.Redis.from_pool(pool)
 
     #MUTEX
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
     lock = await r.set(mutex_key, 'lock', ex=30, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
+        await r.aclose()
         return None
 
     epoch = int.from_bytes(raw[0:5], 'little', signed=False)
@@ -72,6 +74,7 @@ async def async_post_process(message, param):
                     raw = raw[5:]
             else:
                 print(f"[{TAG}] discard duplicated ({message['data']['sense_time']})")
+                await r.aclose()
                 return None
 
     print(f"[{TAG}] raw:{raw}")
@@ -176,7 +179,8 @@ async def async_post_process(message, param):
         print(f"[{TAG}] maybe truncated")
         pass
     await r.delete(mutex_key)
-
+    await r.aclose()
+    
     if prev_data_id is not None:
         result = await pyiotown.delete.async_data(iotown_url,
                                                   iotown_token,

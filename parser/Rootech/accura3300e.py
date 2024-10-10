@@ -7,42 +7,36 @@ import struct
 
 TAG = 'Accura3300e'
 
-def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
-  global iotown_url, iotown_token
+def init(url, pp_name, mqtt_url, r, dry_run=False):
+  global iotown_url, iotown_token, redis_url
   
   url_parsed = urlparse(url)
   iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")
   iotown_token = url_parsed.password
-    
+
+  redis_url = r
   if redis_url is None:
     print(f"Redis is required for Rootech Accura3300e.")
     return None
 
-  global r
-    
-  try:
-    r = redis.from_url(redis_url)
-    if r.ping() == False:
-      r = None
-      raise Exception('Redis connection failed')
-  except Exception as e:
-    raise(e)
-      
   return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
 
 def post_process(message, param=None):
   raw = base64.b64decode(message['meta']['raw'])
   
+  r = redis.from_url(redis_url)
   #MUTEX
   mutex_key = f"PP:RootechAccura3300e:MUTEX:{message['grpid']}:{message['key']}"
 
   lock = r.set(mutex_key, 'lock', ex=30, nx=True)
   if lock != True:
+    r.close()
     return None
 
   print(f"[{TAG}] lock with '{mutex_key}': {lock}")
   
   if len(raw) < 6:
+    r.close()
     raise Exception('Too short')
   
   epoch = int.from_bytes(raw[0:5], 'little', signed=False)
@@ -52,11 +46,13 @@ def post_process(message, param=None):
   offset = raw[5]
   if offset != 0:
     #TODO reassembly
+    r.close()
     raise Exception('Reassembly not supported yet')
 
   message_length = raw[6]
   if len(raw) - (5 + 1 + 1 + 2) != message_length:
     #TODO reassembly
+    r.close()
     raise Exception(f"Invalid number of bytes: {message_length} expected but {len(raw) - (5 + 1 + 1 + 2)}")
 
   address = int.from_bytes(raw[7:9], 'little', signed=False)
@@ -69,9 +65,11 @@ def post_process(message, param=None):
       #print(f"[{address + (index // 2)}] {name}: {val}")
       index += size
     else:
+      r.close()
       raise Exception(f"Parsing error at offset {index + 9}")
   
   #print(f"[{TAG}] raw:{raw}")
+  r.close()
   return message
 
 def parse_register(address, buf):
