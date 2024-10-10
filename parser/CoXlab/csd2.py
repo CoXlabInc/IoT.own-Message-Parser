@@ -38,7 +38,8 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
 async def async_post_process(message, param):
     raw = base64.b64decode(message['meta']['raw'])
     
-    r = redis.Redis.from_pool(pool)
+    #r = redis.Redis.from_pool(pool)
+    r = redis.Redis(connection_pool=pool)
 
     #MUTEX
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"

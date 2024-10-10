@@ -8,7 +8,7 @@ import json
 TAG = 'CSD4'
 
 def init(url, pp_name, mqtt_url, r, dry_run=False):
-    global iotown_url, iotown_token
+    global iotown_url, iotown_token, redis_url
     
     url_parsed = urlparse(url)
     iotown_url = f"{url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else "")

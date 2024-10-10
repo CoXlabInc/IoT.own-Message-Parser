@@ -52,8 +52,9 @@ def append_error(message, error):
 async def async_post_process(message):
     mutex_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{message['nid']}:{message['key']}"
 
-    r = redis.Redis.from_pool(pool)
-
+    #r = redis.Redis.from_pool(pool)
+    r = redis.Redis(connection_pool=pool)
+    
     lock = await r.set(mutex_key, 'lock', ex=10, nx=True)
     print(f"[{TAG}] lock with '{mutex_key}': {lock}")
     if lock != True:
@@ -106,7 +107,7 @@ async def async_post_process(message):
         if key.startswith('uwb'):
             anchors = message['data'][key].copy().keys()
             for anchor in anchors:
-                def get_anchor_desc(anchor_id):
+                async def get_anchor_desc(anchor_id):
                     result = pyiotown.get.node(iotown_url, iotown_token,
                                                anchor_id,
                                                group_id=message['grpid'],
@@ -124,11 +125,11 @@ async def async_post_process(message):
                         return None
 
                 anchor_id = f'LW140C5BFFFF{anchor.upper()}'
-                anchor_desc = get_anchor_desc(anchor_id)
+                anchor_desc = await get_anchor_desc(anchor_id)
                 if anchor_desc is None:
                     print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
                     anchor_id = f'LW140C5BEFFF{anchor.upper()}'
-                    anchor_desc = get_anchor_desc(anchor_id)
+                    anchor_desc = await get_anchor_desc(anchor_id)
 
                 if anchor_desc is None:
                     print(f"[PLN] {anchor_id} is not found. (nid:{message['nid']})")
