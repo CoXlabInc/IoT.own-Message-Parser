@@ -135,9 +135,16 @@ async def async_post_process(message, param):
                     ch += 1
 
                 
-            elif type == 3 or type == 4:
-                # SLIP over 232 or 485
-                message['data'][req] = 'slip' + ('232' if type == 3 else '485') + ','
+            elif type in [ 3, 4, 8, 9]:
+                # SLIP, raw over 232, 485
+                if type == 3:
+                    message['data'][req] = 'slip232,'
+                elif type == 4:
+                    message['data'][req] = 'slip485,'
+                elif type == 8:
+                    message['data'][req] = 'raw232,'
+                else:
+                    message['data'][req] = 'raw485,'
 
                 length = raw[1]
                 raw = raw[2:]
