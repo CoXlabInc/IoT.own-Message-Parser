@@ -62,7 +62,7 @@ async def async_post_process(message, param):
     if result[0] == True and len(result[1]['data']) > 0:
         value = result[1]['data'][0]['value']
         if value.get('sense_time') == message['data']['sense_time']:
-            if raw[0] == 0xFF: # fragment
+            if len(raw) > 0 and raw[0] == 0xFF: # fragment
                 prev_raw = base64.b64decode(value['raw'])
                 next_raw = raw[1:]
                 if prev_raw[-len(next_raw):] == next_raw:
@@ -178,6 +178,47 @@ async def async_post_process(message, param):
                     raw = raw[length:]
 
                 print(f"[{TAG}] resp:{message['data'][resp]}")
+            elif type in [ 5, 6, 7 ]:
+                # Digital input
+                if type == 5:
+                    message['data'][req] = 'digital,'
+                elif type == 6:
+                    message['data'][req] = 'digitalpu,'
+                elif type == 7:
+                    message['data'][req] = 'digitalpd,'
+
+                ch = raw[1]
+                count = raw[2]
+
+                message['data'][req] += f"{ch},{count}"
+
+                raw = raw[3:]
+
+                for x in range(count):
+                    message['data'][f"{resp}_d{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
+                    message['data'][f"{resp}_d{ch}"] = raw[1]
+                    raw = raw[2:]
+                    ch += 1
+                
+            elif type in [ 10, 11, 12, 13 ]:
+                if type == 10:
+                    message['data'][req] = 'digitalout,'
+                elif type == 11:
+                    message['data'][req] = 'digitaloutod,'
+                elif type == 12:
+                    message['data'][req] = 'digitaloutodpu,'
+                elif type == 13:
+                    message['data'][req] = 'digitaloutodpd,'
+
+                ch = raw[1]
+                state = raw[2]
+                delay = raw[3]
+
+                message['data'][req] += f"{ch},{state},{delay}"
+
+                message['data'][f"{resp}_d{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[4]).isoformat() + 'Z'
+                message['data'][f"{resp}_d{ch}"] = raw[5]
+                raw = raw[6:]
             else:
                 # Unknown type
                 message['data'][req] = None
