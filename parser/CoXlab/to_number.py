@@ -56,19 +56,23 @@ def post_process(message, param=None):
             raise Exception(f"The type ({number_type}) must be one of 'int', or 'float'.")
         
         source_key = params[k][1]
-        if source_key not in message['data'].keys():
+        if source_key is None:
+            source_encoded = message['meta']['raw']
+        elif source_key not in message['data'].keys():
             r.delete(mutex_key)
             r.close()
             raise Exception(f"The '{source_key}' is not found.")
-        
+        else:
+            source_encoded = message['data'][source_key]
+
         try:
-            source = bytes.fromhex(message['data'][source_key])
+            source = bytes.fromhex(source_encoded)
         except:
-            pass
+            source = None
 
         if source is None:
             try:
-                source = base64.b64decode(message['data'][source_key])
+                source = base64.b64decode(source_encoded)
             except:
                 r.delete(mutex_key)
                 r.close()
