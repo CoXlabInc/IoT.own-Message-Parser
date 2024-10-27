@@ -33,7 +33,7 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
         event_loop.run_forever()
     threading.Thread(target=event_loop_thread, daemon=True).start()
 
-    return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
+    return pyiotown.post_process.connect_common(url, pp_name, post_process_up, post_process_down, mqtt_url=mqtt_url, dry_run=dry_run)
     
 async def async_post_process(message, param):
     raw = base64.b64decode(message['meta']['raw'])
@@ -199,8 +199,11 @@ async def async_post_process(message, param):
 
     return message
 
-def post_process(message, param=None):
+def post_process_up(message, param=None):
     if message['meta']['fPort'] == 1:
         return asyncio.run_coroutine_threadsafe(async_post_process(message, param), event_loop)
     else:
         return message
+
+def post_process_down(message):
+    print(f"[{TAG}] gotcha {message}")

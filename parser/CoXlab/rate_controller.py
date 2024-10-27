@@ -19,7 +19,7 @@ def init(url, pp_name, mqtt_url, r, dry_run=False):
         print(f"Redis is required for {TAG}.")
         return None
 
-    return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url, dry_run=dry_run)
+    return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url=mqtt_url, dry_run=dry_run)
     
 def post_process(message, param=None):
     if param is None:
