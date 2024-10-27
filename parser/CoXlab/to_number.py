@@ -40,7 +40,7 @@ def post_process(message, param=None):
     # * start_pos: the start index of source to convert
     # * length: the length of source to convert
     # * endian: 'little' or 'big'
-    # * signed: true of false
+    # * signed: true of false (optional only for int, default: true)
     params = json.loads('{' + param + '}')
 
     for k in params.keys():
@@ -87,11 +87,15 @@ def post_process(message, param=None):
             r.close()
             raise Exception(f"The endian value ({endian}) must be one of 'big' or 'little'.")
 
-        signed = params[k][5]
-        if type(signed) is not bool:
-            r.delete(mutex_key)
-            r.close()
-            raise Exception(f"The signed value ({signed}) must be a boolean type.")
+        if number_type == 'int':
+            if len(params[k]) >= 6:
+                signed = params[k][5]
+                if type(signed) is not bool:
+                    r.delete(mutex_key)
+                    r.close()
+                    raise Exception(f"The signed value ({signed}) must be a boolean type.")
+            else:
+                signed = True
 
         fmt = '<' if endian == 'little' else '>'
         if number_type == 'float':
