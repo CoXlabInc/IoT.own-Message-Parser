@@ -108,10 +108,10 @@ async def async_post_process(message):
             anchors = message['data'][key].copy().keys()
             for anchor in anchors:
                 async def get_anchor_desc(anchor_id):
-                    result = pyiotown.get.node(iotown_url, iotown_token,
-                                               anchor_id,
-                                               group_id=message['grpid'],
-                                               verify=False)
+                    result = await pyiotown.get.async_node(iotown_url, iotown_token,
+                                                           anchor_id,
+                                                           group_id=message['grpid'],
+                                                           verify=False)
                     if result[0] == True:
                         try:
                             return json.loads('{' + result[1]['node_desc'] + '}')
