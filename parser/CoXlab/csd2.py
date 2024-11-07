@@ -9,6 +9,7 @@ import json
 import struct
 import asyncio
 import threading
+import traceback
 
 TAG = 'CSD2'
 
@@ -88,7 +89,7 @@ async def async_post_process(message, param):
 
             req = f"req{req_index}"
             resp = f"resp{req_index}"
-        
+
             if type == 0 or type == 1:
                 # Modbus read holding or input registers
                 message['data'][req] = 'modbusrh' if type == 0 else 'modbusri'
@@ -201,6 +202,7 @@ async def async_post_process(message, param):
                     ch += 1
                 
             elif type in [ 10, 11, 12, 13 ]:
+                # Digital output
                 if type == 10:
                     message['data'][req] = 'digitalout,'
                 elif type == 11:
@@ -219,14 +221,36 @@ async def async_post_process(message, param):
                 message['data'][f"{resp}_d{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[4]).isoformat() + 'Z'
                 message['data'][f"{resp}_d{ch}"] = raw[5]
                 raw = raw[6:]
+            elif type == 14:
+                # I2C
+                device = int.from_bytes(raw[1:3], 'little', signed=False)
+                device_list = [ 'SHT' ]
+
+                message['data'][req] = device_list[device] if device < len(device_list) else None
+                if message['data'][req] == 'SHT':
+                    message['data'][f"{resp}_time"] = datetime.utcfromtimestamp(epoch + raw[3]).isoformat() + 'Z'
+
+                    length = raw[4]
+                    
+                    sht_types = [ 'AUTO_DETECT', 'SHT3X', 'SHT85', 'SHT3X_ALT', 'SHTC1', 'SHTC3', 'SHTW1', 'SHTW2', 'SHT4X' ]
+                    message['data'][f"{resp}_type"] = sht_types[raw[5]]
+                    if length == 5:
+                        message['data'][f"{resp}_temperature"] = int.from_bytes(raw[6:8], 'little', signed=True) / 100
+                        message['data'][f"{resp}_humidity"] = int.from_bytes(raw[8:10], 'little', signed=False) / 100
+                    else:
+                        message['data'][f"{resp}_temperature"] = None
+                        message['data'][f"{resp}_humidity"] = None
+                    raw = raw[4 + length + 1:]
+                else:
+                    device
             else:
                 # Unknown type
                 message['data'][req] = None
                 break
             req_index += 1
-    except:
-        print(f"[{TAG}] maybe truncated")
-        pass
+    except Exception:
+        print(f"[{TAG}] {traceback.format_exc()}")
+        
     await r.delete(mutex_key)
     await r.aclose()
     
