@@ -74,33 +74,83 @@ def post_process(message, param=None):
             message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
             message['data']['down_dist_mm'] = int.from_bytes(raw[9:11], 'little', signed=False)
             message['data']['cover_dist_mm'] = int.from_bytes(raw[11:13], 'little', signed=False)
-        else:
-            print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
-    elif message['meta']['fPort'] == 5:
-        if len(raw) >= 17:
-            # Landslide
+        elif len(raw) == 15:
+            # Manhole + FW Ver
             epoch = int.from_bytes(raw[0:5], 'little', signed=False)
             message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
             message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
             message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
-
-            acc_x = int.from_bytes(raw[9:11], 'little', signed=True) / 1024
-            message['data']['acc_x'] = acc_x
-            
-            acc_y = int.from_bytes(raw[11:13], 'little', signed=True) / 1024
-            message['data']['acc_y'] = acc_y
-            
-            acc_z = int.from_bytes(raw[13:15], 'little', signed=True) / 1024
-            message['data']['acc_z'] = acc_z
-            
+            message['data']['down_dist_mm'] = int.from_bytes(raw[9:11], 'little', signed=False)
+            message['data']['cover_dist_mm'] = int.from_bytes(raw[11:13], 'little', signed=False)
+            fw_ver = raw[14]*100 + raw[13] 
+            message['data']['fw_ver'] = fw_ver/100            
+        else:
+            print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
+    elif message['meta']['fPort'] == 5:
+        if len(raw) == 19:
+            # Landslide
+            epoch = int.from_bytes(raw[0:4], 'little', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['event_flag'] = raw[4]            
+            message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
+            message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
+            message['data']['angle_x'] = int.from_bytes(raw[9:11], 'little', signed=False) / 100
+            message['data']['angle_y'] = int.from_bytes(raw[11:13], 'little', signed=False) / 100            
+            message['data']['angle_z'] = int.from_bytes(raw[13:15], 'little', signed=False) / 100 
             message['data']['crack_mv'] = int.from_bytes(raw[15:17], 'little', signed=False)
-
-            acc_total = math.sqrt(math.pow(acc_x, 2) + math.pow(acc_y, 2) + math.pow(acc_z, 2))
-            
-            message['data']['angle_x'] = math.acos(acc_x / acc_total) * 180 / math.pi
-            message['data']['angle_y'] = math.acos(acc_y / acc_total) * 180 / math.pi
-            message['data']['angle_z'] = math.acos(acc_z / acc_total) * 180 / math.pi
-            # TODO
+            fw_ver = raw[18]*100 + raw[17] 
+            message['data']['fw_ver'] = fw_ver/100
+        elif len(raw) == 25:
+            # Landslide + soil
+            epoch = int.from_bytes(raw[0:4], 'little', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['event_flag'] = raw[4]            
+            message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
+            message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
+            message['data']['angle_x'] = int.from_bytes(raw[9:11], 'little', signed=False) / 100
+            message['data']['angle_y'] = int.from_bytes(raw[11:13], 'little', signed=False) / 100            
+            message['data']['angle_z'] = int.from_bytes(raw[13:15], 'little', signed=False) / 100 
+            message['data']['crack_mv'] = int.from_bytes(raw[15:17], 'little', signed=False)
+            fw_ver = raw[18]*100 + raw[17] 
+            message['data']['fw_ver'] = fw_ver/100
+            message['data']['soil_moisture_h'] = int.from_bytes(raw[19:21], 'little', signed=False) / 10
+            message['data']['soil_moisture_l'] = int.from_bytes(raw[21:23], 'little', signed=False) / 10
+            message['data']['soil_temperature'] = int.from_bytes(raw[23:25], 'little', signed=True) / 10
+        elif len(raw) == 31:
+            # Landslide + GPS
+            epoch = int.from_bytes(raw[0:4], 'little', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['event_flag'] = raw[4]            
+            message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
+            message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
+            message['data']['angle_x'] = int.from_bytes(raw[9:11], 'little', signed=False) / 100
+            message['data']['angle_y'] = int.from_bytes(raw[11:13], 'little', signed=False) / 100            
+            message['data']['angle_z'] = int.from_bytes(raw[13:15], 'little', signed=False) / 100 
+            message['data']['crack_mv'] = int.from_bytes(raw[15:17], 'little', signed=False)
+            fw_ver = raw[18]*100 + raw[17] 
+            message['data']['fw_ver'] = fw_ver/100
+            message['data']['gps_lat'] = int.from_bytes(raw[19:23], 'little', signed=True) / 100000
+            message['data']['gps_lon'] = int.from_bytes(raw[23:27], 'little', signed=True) / 100000
+            message['data']['gps_alt'] = int.from_bytes(raw[27:31], 'little', signed=False)
+        elif len(raw) == 37:
+            # Landslide + soil + GPS
+            epoch = int.from_bytes(raw[0:4], 'little', signed=False)
+            message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+            message['data']['event_flag'] = raw[4]            
+            message['data']['report_period'] = int.from_bytes(raw[5:7], 'little', signed=False)
+            message['data']['bat_voltage'] = int.from_bytes(raw[7:9], 'little', signed=False) / 1000
+            message['data']['angle_x'] = int.from_bytes(raw[9:11], 'little', signed=False) / 100
+            message['data']['angle_y'] = int.from_bytes(raw[11:13], 'little', signed=False) / 100            
+            message['data']['angle_z'] = int.from_bytes(raw[13:15], 'little', signed=False) / 100 
+            message['data']['crack_mv'] = int.from_bytes(raw[15:17], 'little', signed=False)
+            fw_ver = raw[18]*100 + raw[17] 
+            message['data']['fw_ver'] = fw_ver/100
+            message['data']['soil_moisture_h'] = int.from_bytes(raw[19:21], 'little', signed=False) / 10
+            message['data']['soil_moisture_l'] = int.from_bytes(raw[21:23], 'little', signed=False) / 10
+            message['data']['soil_temperature'] = int.from_bytes(raw[23:25], 'little', signed=True) / 10
+            message['data']['gps_lat'] = int.from_bytes(raw[25:29], 'little', signed=True) / 100000
+            message['data']['gps_lon'] = int.from_bytes(raw[29:33], 'little', signed=True) / 100000
+            message['data']['gps_alt'] = int.from_bytes(raw[33:37], 'little', signed=False)
         else:
             print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
     elif message['meta']['fPort'] == 6:
@@ -125,3 +175,4 @@ def post_process(message, param=None):
         print(f"[DT-D100] unknown format ({message['meta']['fPort']}, {len(raw)})")
 
     return message
+
