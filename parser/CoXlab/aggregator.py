@@ -27,7 +27,9 @@ def post_process(message, param=None):
     except:
         raise Exception('param format error')
 
-    # "id":"aggregator ID","data":{"temperature":"room1_temperature", ...},"timeout":11
+    # "id":"aggregator ID","data":{"temperature":"room1_temperature", ...},"timeout":11,"group_by":{"temperature":"avg", ...}
+    # - group_by: Aggregate function per data key. The value must be one of 'avg', 'min', 'max', 'count', or 'sum' str.
+    #             If it is omitted, aggregates the latest value.
     
     id = params.get('id')
     if id is None or type(id) is not str:
@@ -41,7 +43,12 @@ def post_process(message, param=None):
         timeout = int(params.get('timeout'))
     except:
         raise Exception(f"[{TAG}] The 'timeout' number MUST be specified.")
-    
+
+    group_by = params.get('group_by')
+    if group_by is not None:
+        if type(group_by) is not str and type(group_by) is not dict:
+            raise Exception(f"[{TAG}] The type of 'group_by' MUST be str or object.")
+
     r = redis.from_url(redis_url)
 
     #Data MUTEX
@@ -52,15 +59,20 @@ def post_process(message, param=None):
         r.close()
         return None
 
-    mapping = {}
+    mapping_key = f"PP:{TAG}:Mapping:{message['grpid']}:{id}"
+    mapping = r.get(mapping_key)
+    try:
+        mapping = json.loads(mapping)
+    except:
+        mapping = {}
+
     for k in data.keys():
         v = message['data'].get(k)
         if v is not None:
-            mapping[data[k]] = v
-
-    if len(mapping.keys()) > 0:
-        hash_key = f"PP:{TAG}:Data:{message['grpid']}:{id}"
-        r.hset(hash_key, mapping=mapping)
+            if mapping.get(data[k]) is None:
+                mapping[data[k]] = [ v ]
+            else:
+                mapping[data[k]].append(v)
 
     #Report MUTEX
     report_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{id}"
@@ -68,35 +80,44 @@ def post_process(message, param=None):
 
     #Report on lock acquisition
     if lock == True:
-        dataset = r.hgetall(hash_key)
         aggregated_message = {}
-        for bk in dataset.keys():
-            k = bk.decode('utf-8')
+        for k in mapping.keys():
+            if type(group_by) is str:
+                grouping_method = group_by
+            else:
+                grouping_method = group_by.get(k)
             
-            try:
-                v = int(dataset[bk])
-            except:
-                v = None
-
-            if v is None:
+            print(f"[{TAG}] values:{mapping[k]}, group_by:{grouping_method}")
+            if grouping_method == 'avg':
                 try:
-                    v = float(dataset[bk])
+                    aggregated_message[k] = sum(mapping[k]) / len(mapping[k])
                 except:
-                    v = None
-
-            if v is None:
+                    aggregated_message[k] = f"Error sum({mapping[k]}) / len({mapping[k]})"
+            elif grouping_method == 'min':
                 try:
-                    v = bool(dataset[bk])
+                    aggregated_message[k] = min(mapping[k])
                 except:
-                    v = None
-
-            if v is None:
+                    aggregated_message[k] = f"Error min({mapping[k]})"
+            elif grouping_method == 'max':
                 try:
-                    v = str(dataset[bk])
+                    aggregated_message[k] = max(mapping[k])
                 except:
-                    v = None
-                    
-            aggregated_message[k] = v
+                    aggregated_message[k] = f"Error max({mapping[k]})"
+            elif grouping_method == 'count':
+                try:
+                    aggregated_message[k] = len(mapping[k])
+                except:
+                    aggregated_message[k] = f"Error len({mapping[k]})"
+            elif grouping_method == 'sum':
+                try:
+                    aggregated_message[k] = sum(mapping[k])
+                except:
+                    aggregated_message[k] = f"Error sum({mapping[k]})"
+            else:
+                try:
+                    aggregated_message[k] = mapping[k][-1]
+                except:
+                    aggregated_message[k] = f"Error {mapping[k]}[-1]"
 
         print(f"[{TAG}] report {aggregated_message}")
 
@@ -105,8 +126,10 @@ def post_process(message, param=None):
                               verify=False) == False:
             r.close()
             raise Exception(f"[{TAG}] post data error")
-        r.delete(hash_key)
-        
+        r.delete(mapping_key)
+    else:
+        r.set(mapping_key, json.dumps(mapping), ex=timeout)
+
     r.delete(mutex_key)
     r.close()
     return message
