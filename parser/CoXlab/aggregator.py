@@ -1,5 +1,6 @@
 import base64
 from datetime import datetime, timedelta
+from dateutil.parser import isoparse
 import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
@@ -28,12 +29,13 @@ def post_process(message, param=None):
         raise Exception('param format error')
 
     # "id":"aggregator ID","data":{"temperature":"room1_temperature", ...},"timeout":11,"group_by":{"temperature":"avg", ...}
+    # - id: Aggregator ID. If it is omitted, the aggregated data will be posted as the device's.
     # - group_by: Aggregate function per data key. The value must be one of 'avg', 'min', 'max', 'count', or 'sum' str.
     #             If it is omitted, aggregates the latest value.
     
     id = params.get('id')
-    if id is None or type(id) is not str:
-        raise Exception(f"[{TAG}] The 'id' str MUST be specified.")
+    if id is not None and type(id) is not str:
+        raise Exception(f"[{TAG}] The type of 'id' MUST be str.")
 
     data = params.get('data')
     if data is None or type(data) is not dict:
@@ -59,76 +61,146 @@ def post_process(message, param=None):
         r.close()
         return None
 
-    mapping_key = f"PP:{TAG}:Mapping:{message['grpid']}:{id}"
+    mapping_key = f"PP:{TAG}:Mapping:{message['grpid']}:"
+    if id is not None:
+        mapping_key += id
+    else:
+        mapping_key += message['nid']
+
     mapping = r.get(mapping_key)
     try:
         mapping = json.loads(mapping)
     except:
         mapping = {}
 
+    valid_values = {}
     for k in data.keys():
         v = message['data'].get(k)
-        if v is not None:
-            if mapping.get(data[k]) is None:
-                mapping[data[k]] = [ v ]
-            else:
-                mapping[data[k]].append(v)
+        if v is None:
+            continue
+        
+        try:
+            t = isoparse(message['data'].get('sense_time')).timestamp()
+        except:
+            t = isoparse(message['key'].split(':', maxsplit=1)[1]).timestamp()
+        tv = {
+            't': t,
+            'v': v
+        }
+        if mapping.get(data[k]) is None:
+            mapping[data[k]] = [ tv ]
+        else:
+            mapping[data[k]].append(tv)
+
+        only_valids = []
+        for tv in mapping[data[k]]:
+            if tv['t'] > t - timeout:
+                only_valids.append(tv)
+                if valid_values.get(k) is None:
+                    valid_values[k] = [ tv['v'] ]
+                else:
+                    valid_values[k].append(tv['v'])
+        mapping[data[k]] = only_valids
 
     #Report MUTEX
-    report_key = f"PP:{TAG}:MUTEX:{message['grpid']}:{id}"
-    lock = r.set(report_key, 'lock', ex=timeout, nx=True)
+    if id is not None:
+        report_key = f"PP:{TAG}:Report:{message['grpid']}:{id}"
 
-    #Report on lock acquisition
-    if lock == True:
-        aggregated_message = {}
-        for k in mapping.keys():
+        lock = r.set(report_key, 'lock', ex=timeout, nx=True)
+
+        #Report on lock acquisition
+        if lock == True:
+            aggregated_message = {}
+            for k in valid_values.keys():
+                if type(group_by) is str:
+                    grouping_method = group_by
+                else:
+                    grouping_method = group_by.get(k)
+            
+                print(f"[{TAG}] values:{valid_values[k]}, group_by:{grouping_method}")
+                if grouping_method == 'avg':
+                    try:
+                        aggregated_message[data[k]] = sum(valid_values[k]) / len(valid_values[k])
+                    except:
+                        aggregated_message[data[k]] = f"Error sum({valid_values[k]}) / len({valid_values[k]})"
+                elif grouping_method == 'min':
+                    try:
+                        aggregated_message[data[k]] = min(valid_values[k])
+                    except:
+                        aggregated_message[data[k]] = f"Error min({valid_values[k]})"
+                elif grouping_method == 'max':
+                    try:
+                        aggregated_message[data[k]] = max(valid_values[k])
+                    except:
+                        aggregated_message[data[k]] = f"Error max({valid_values[k]})"
+                elif grouping_method == 'count':
+                    try:
+                        aggregated_message[data[k]] = len(valid_values[k])
+                    except:
+                        aggregated_message[data[k]] = f"Error len({valid_values[k]})"
+                elif grouping_method == 'sum':
+                    try:
+                        aggregated_message[data[k]] = sum(valid_values[k])
+                    except:
+                        aggregated_message[data[k]] = f"Error sum({valid_values[k]})"
+                else:
+                    try:
+                        aggregated_message[data[k]] = valid_values[k][-1]
+                    except:
+                        aggregated_message[data[k]] = f"Error {valid_values[k]}[-1]"
+
+            print(f"[{TAG}] report {aggregated_message}")
+
+            result = pyiotown.post.data(iotown_url, iotown_token,
+                                        id, aggregated_message, group_id=message['grpid'],
+                                        verify=False)
+            if result[0] == False:
+                r.close()
+                raise Exception(f"[{TAG}] post data error")
+            r.delete(mapping_key)
+        else:
+            r.set(mapping_key, json.dumps(mapping), ex=timeout)
+    else:
+        r.set(mapping_key, json.dumps(mapping), ex=timeout)
+
+        for k in valid_values.keys():
             if type(group_by) is str:
                 grouping_method = group_by
             else:
                 grouping_method = group_by.get(k)
-            
-            print(f"[{TAG}] values:{mapping[k]}, group_by:{grouping_method}")
+
             if grouping_method == 'avg':
                 try:
-                    aggregated_message[k] = sum(mapping[k]) / len(mapping[k])
+                    message['data'][data[k]] = sum(valid_values[k]) / len(valid_values[k])
                 except:
-                    aggregated_message[k] = f"Error sum({mapping[k]}) / len({mapping[k]})"
+                    message['data'][data[k]] = f"Error sum({valid_values[k]}) / len({valid_values[k]})"
             elif grouping_method == 'min':
                 try:
-                    aggregated_message[k] = min(mapping[k])
+                    message['data'][data[k]] = min(valid_values[k])
                 except:
-                    aggregated_message[k] = f"Error min({mapping[k]})"
+                    message['data'][data[k]] = f"Error min({valid_values[k]})"
             elif grouping_method == 'max':
                 try:
-                    aggregated_message[k] = max(mapping[k])
+                    message['data'][data[k]] = max(valid_values[k])
                 except:
-                    aggregated_message[k] = f"Error max({mapping[k]})"
+                    message['data'][data[k]] = f"Error max({valid_values[k]})"
             elif grouping_method == 'count':
                 try:
-                    aggregated_message[k] = len(mapping[k])
+                    message['data'][data[k]] = len(valid_values[k])
                 except:
-                    aggregated_message[k] = f"Error len({mapping[k]})"
+                    message['data'][data[k]] = f"Error len({valid_values[k]})"
             elif grouping_method == 'sum':
                 try:
-                    aggregated_message[k] = sum(mapping[k])
+                    message['data'][data[k]] = sum(valid_values[k])
                 except:
-                    aggregated_message[k] = f"Error sum({mapping[k]})"
+                    message['data'][data[k]] = f"Error sum({valid_values[k]})"
             else:
                 try:
-                    aggregated_message[k] = mapping[k][-1]
+                    message['data'][data[k]] = valid_values[k][-1]
                 except:
-                    aggregated_message[k] = f"Error {mapping[k]}[-1]"
+                    message['data'][data[k]] = f"Error {valid_values[k]}[-1]"
 
-        print(f"[{TAG}] report {aggregated_message}")
-
-        if pyiotown.post.data(iotown_url, iotown_token,
-                              id, aggregated_message, group_id=message['grpid'],
-                              verify=False) == False:
-            r.close()
-            raise Exception(f"[{TAG}] post data error")
-        r.delete(mapping_key)
-    else:
-        r.set(mapping_key, json.dumps(mapping), ex=timeout)
+            print(f"[{TAG}] {k} values:{valid_values[k]}, group_by:{grouping_method}, to {data[k]}:{message['data'][data[k]]}")
 
     r.delete(mutex_key)
     r.close()

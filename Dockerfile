@@ -4,7 +4,8 @@ WORKDIR /root/
 RUN apk add --no-cache nodejs
 RUN python3 -m pip install redis
 RUN python3 -m pip install numpy
-RUN python3 -m pip install pyiotown==0.6.4
+RUN python3 -m pip install python-dateutil
+RUN python3 -m pip install pyiotown==0.6.5.dev1
 
 COPY ./parser .
 
