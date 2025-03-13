@@ -104,7 +104,7 @@ async def async_post_process(message):
     	message['data'][key] = result_dict[key]
 
     for key in message['data']:
-        if key.startswith('uwb') and key.endswith('Danger') != False:
+        if key.startswith('uwb') and key.endswith('Danger') == False:
             anchors = message['data'][key].copy().keys()
             for anchor in anchors:
                 async def get_anchor_desc(anchor_id):
