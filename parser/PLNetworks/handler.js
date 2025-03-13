@@ -2010,7 +2010,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 } else if (subType >= 0x01 && subType <= 0x04) {
                     index++;
                     subLength--;
-
+    
                     let keyName = `uwb${scanIndex}`;
                     out[keyName] = {};
                     for (let j = 0; j < subType; j++) {
@@ -2048,12 +2048,12 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 if(sign)
                 {
                     //out.floor = 'B' + (0xFF - data[i + 4] + 1);
-		    out.floor = (0xFFFFFF00 | data[i + 4]);
+                    out.floor = (0xFFFFFF00 | data[i + 4]);
                 }
                 else
                 {
                     //out.floor = 'F' + val;
-		    out.floor = data[i + 4];
+                    out.floor = data[i + 4];
                 }
             }
             else if (length == 9)
@@ -2065,12 +2065,12 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 if(sign)
                 {
                     //out.floor = 'B' + (0xFF - data[i + 4] + 1);
-		    out.floor = (0xFFFFFF00 | data[i + 4]);
+                    out.floor = (0xFFFFFF00 | data[i + 4]);
                 }
                 else
                 {
                     //out.floor = 'F' + data[i + 4];
-		    out.floor = data[i + 4];
+                    out.floor = data[i + 4];
                 }
                 val = data[i + 5];
                 if(val == 0)
@@ -2099,6 +2099,13 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
             if (length == 4)
             {
                 out.shotcounter = ((data[i + 2] << 24) + (data[i + 3] << 16) + (data[i + 4] << 8) + data[i + 5]);
+            }
+        } else if (type == 0xD0) {
+            /* Danger Anchor Info */
+            if (length == 3)
+            {
+                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
+                out.uwb1Danger = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
             }
         } else if (type == 0xF0) {
             out.battery = data[i + 2];
