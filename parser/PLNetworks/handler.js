@@ -1786,7 +1786,10 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                     sensing.O2 = ((data[s + j + 2] << 8) + data[s + j + 3])/100;
                 }
                 else if ( sub_type == 0x05) {
-                    sensing.CO2 = ((data[s + j + 2] << 8) + data[s + j + 3])/100;
+                    if ( sub_len == 2)
+                        sensing.CO2 = ((data[s + j + 2] << 8) + data[s + j + 3])/100;
+                    else
+                        sensing.CO2 = ((data[s + j + 2] << 24) + (data[s + j + 3] << 16) + (data[s + j + 4] << 8) + data[s + j + 5])/100;
                 }
                 else if ( sub_type == 0x06) {
                     info.mandown = data[s + j + 2];
