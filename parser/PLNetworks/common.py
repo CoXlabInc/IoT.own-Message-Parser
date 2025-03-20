@@ -111,7 +111,8 @@ async def async_post_process(message):
                     result = await pyiotown.get.async_node(iotown_url, iotown_token,
                                                            anchor_id,
                                                            group_id=message['grpid'],
-                                                           verify=False)
+                                                           verify=False,
+                                                           include_lorawan_session=False)
                     if result[0] == True:
                         try:
                             return json.loads('{' + result[1]['node_desc'] + '}')
