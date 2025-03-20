@@ -99,7 +99,7 @@ async def async_post_process(message, param):
                 count = int.from_bytes(raw[4:6], 'little', signed=False)
                 message['data'][req] += f",{slave},{start_addr},{count}"
 
-                print(f"[{TAG}] req:{message['data'][req]}")
+                print(f"[{TAG}] {req}:{message['data'][req]}")
                 
                 if raw[6] == 0xFF:
                     message['data'][resp + "_time"] = -1
@@ -113,7 +113,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = v
                     raw = raw[8+raw[7]:]
                 
-                print(f"[{TAG}] resp:{message['data'][resp]}")
+                print(f"[{TAG}] {resp}:{message['data'][resp]}")
                 
             elif type == 2:
                 # Analog
@@ -123,14 +123,14 @@ async def async_post_process(message, param):
                 count = raw[2]
                 message['data'][req] += f",{ch},{count}"
 
-                print(f"[{TAG}] req:{message['data'][req]}")
+                print(f"[{TAG}] {req}:{message['data'][req]}")
 
                 raw = raw[3:]
                 for x in range(count):
                     message['data'][f"{resp}_a{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
                     v = struct.unpack('<f', raw[1:5])[0]
                     message['data'][f"{resp}_a{ch}"] = v
-                    print(f"[{TAG}] resp:{v}")
+                    print(f"[{TAG}] {resp}:{v}")
 
                     raw = raw[5:]
                     ch += 1
@@ -153,7 +153,7 @@ async def async_post_process(message, param):
                 for x in raw[:length]:
                     message['data'][req] += f"{x:02X}"
 
-                print(f"[{TAG}] req:{message['data'][req]}")
+                print(f"[{TAG}] {req}:{message['data'][req]}")
 
                 raw= raw[length:]
 
@@ -178,7 +178,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = v
                     raw = raw[length:]
 
-                print(f"[{TAG}] resp:{message['data'][resp]}")
+                print(f"[{TAG}] {resp}:{message['data'][resp]}")
             elif type in [ 5, 6, 7 ]:
                 # Digital input
                 if type == 5:

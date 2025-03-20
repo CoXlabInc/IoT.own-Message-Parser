@@ -66,13 +66,13 @@ def post_process(message, param=None):
             source_encoded = message['data'][source_key]
 
         try:
-            source = bytes.fromhex(source_encoded)
+            source = bytearray.fromhex(source_encoded)
         except:
             source = None
 
         if source is None:
             try:
-                source = base64.b64decode(source_encoded)
+                source = bytearray(base64.b64decode(source_encoded))
             except:
                 r.delete(mutex_key)
                 r.close()
@@ -86,7 +86,7 @@ def post_process(message, param=None):
             raise Exception(f"The length of the '{source_key}' ({len(source)}) must be greater than or equal to '{start_pos} + {length}'.")
 
         endian = params[k][4]
-        if endian not in ['big', 'little']:
+        if endian not in ['big', 'little', 'CDAB', 'BADC']:
             r.delete(mutex_key)
             r.close()
             raise Exception(f"The endian value ({endian}) must be one of 'big' or 'little'.")
@@ -100,6 +100,26 @@ def post_process(message, param=None):
                     raise Exception(f"The signed value ({signed}) must be a boolean type.")
             else:
                 signed = True
+
+        if endian in ['CDAB', 'BADC']:
+            if length != 4:
+                r.delete(mutex_key)
+                r.close()
+                raise Exception(f"The endian value ({endian}) is for 4-byte data.")
+
+            source_dup = source[start_pos : start_pos+length]
+
+            # 'CDAB' -> 'DCBA'
+            # 'BADC' -> 'ABCD'
+            source[start_pos+0] = source_dup[1]
+            source[start_pos+1] = source_dup[0]
+            source[start_pos+2] = source_dup[3]
+            source[start_pos+3] = source_dup[2]
+
+            if endian == 'CDAB':
+                endian = 'little'
+            else:
+                endian = 'big'
 
         fmt = '<' if endian == 'little' else '>'
         if number_type == 'float':
