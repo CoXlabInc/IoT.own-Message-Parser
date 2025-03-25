@@ -64,18 +64,20 @@ async def async_post_process(message):
     raw = base64.b64decode(message['meta']['raw'])
     if raw[0] >= 0 and raw[0] <= 15:
         # Filter out duplicate
-        seq_key = f"PP:{TAG}:SEQ:{message['grpid']}:{message['nid']}:{message['key']}"
+        seq_key = f"PP:{TAG}:SEQ:{message['grpid']}:{message['nid']}"
         seq_last = await r.get(seq_key)
 
         if seq_last is None:
             # check from DB
-            result = await pyiotown.get.async_storage(iotown_url, iotown_token,
-                                                      message['nid'],
-                                                      group_id=message['grpid'],
-                                                      count=1,
-                                                      verify=False)
-            if result[0] == True and len(result[1]['data']) > 0:
-                seq_last = result[1]['data'][0]['value'].get('seq')
+            result = await pyiotown.get.async_node(iotown_url, iotown_token,
+                                                   message['nid'],
+                                                   group_id=message['grpid'],
+                                                   verify=False,
+                                                   include_lorawan_session=False)
+            if result[0] == True and result[1].get('node') is not None:
+                last_data = result[1]['node'].get('last_data')
+                if last_data is not None:
+                    seq_last = last_data.get('seq')
         else:
             seq_last = int(seq_last)
 
