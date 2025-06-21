@@ -9,10 +9,9 @@ import redis.asyncio as redis
 from urllib.parse import urlparse
 import asyncio
 import threading
+import signal
 
 TAG = 'PLN'
-
-ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     global iotown_url, iotown_token
@@ -31,11 +30,26 @@ def init(url, pp_name, mqtt_url, redis_url, dry_run=False):
     global event_loop
     event_loop = asyncio.new_event_loop()
 
+    global ps
+    ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
     def event_loop_thread():
         event_loop.run_forever()
     threading.Thread(target=event_loop_thread, daemon=True).start()
     
     return pyiotown.post_process.connect_common(url, pp_name, post_process, mqtt_url=mqtt_url, dry_run=dry_run)
+
+def terminate_child(signum, frame):
+    print(f"[{TAG}] Caught signal {signum}. Terminating child process.")
+    if ps is not None:
+        try:
+            os.killpg(os.getpgid(ps.pid), signal.SIGTERM)
+        except ProcessLookupError:
+            print(f"[{TAG}] Child already exited.")
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, terminate_child)
+signal.signal(signal.SIGTERM, terminate_child)
 
 def append_error(message, error):
     if error is None or len(error) == 0:
@@ -169,6 +183,8 @@ def post_process(message, param=None):
 
 if __name__ == '__main__':
     raw = 'BcwEAgAAZM0VAgACNAADFQIAAjQAAxYCAAI0AAMX'
+
+    ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     test_input = '{"data":"' + raw + '","node":{},"gateway":{}}'
     ps.stdin.write(test_input.encode('ascii'))
