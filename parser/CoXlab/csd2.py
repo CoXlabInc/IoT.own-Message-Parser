@@ -243,9 +243,11 @@ async def async_post_process(message, param):
                         message['data'][f"{resp}_humidity"] = None
                     raw = raw[4 + length + 1:]
                 else:
-                    device
+                    print(f"[{TAG}] unknown I2C device:{device}")
+                    message['data'][req] = None
+                    break
             else:
-                # Unknown type
+                print(f"[{TAG}] unknown type:{type}")
                 message['data'][req] = None
                 break
             req_index += 1

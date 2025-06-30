@@ -183,17 +183,6 @@ def post_process(message, param=None):
     return asyncio.run_coroutine_threadsafe(async_post_process(message), event_loop)
 
 if __name__ == '__main__':
-    raw = 'BcwEAgAAZM0VAgACNAADFQIAAjQAAxYCAAI0AAMX'
-
-    ps = subprocess.Popen(['node', os.path.join(os.path.dirname(__file__), 'glue.js')], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-    test_input = '{"data":"' + raw + '","node":{},"gateway":{}}'
-    ps.stdin.write(test_input.encode('ascii'))
-    ps.stdin.flush()
-    out = ps.stdout.readline()
-    print(out)
-
-if __name__ == '__main__':
     app_desc = "IOTOWN Post Process for PLNetworks devices"
 
     parser = argparse.ArgumentParser(description=app_desc)
