@@ -31,7 +31,7 @@ def main(iotown_url, mqtt_url, redis_url, dry_run):
     CoXlab.to_number.init(iotown_url, 'ToNumber', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Cuetech', Cuetech.post_process, mqtt_url=mqtt_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'DT-D100', DT.d100.post_process, mqtt_url=mqtt_url, dry_run=dry_run).loop_start()
-    EPEVER.init(url, 'EPEVER ChargeController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
+    EPEVER.init(iotown_url, 'EPEVER ChargeController', mqtt_url, args.redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Honeywell HVT', Honeywell.hvt.post_process, mqtt_url=mqtt_url, dry_run=dry_run).loop_start()
     LightStar.init(iotown_url, 'LightStar KDX-300', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     pyiotown.post_process.connect_common(iotown_url, 'Milesight AM300', Milesight.am300.post_process, mqtt_url=mqtt_url, dry_run=dry_run).loop_start()
@@ -45,10 +45,10 @@ def main(iotown_url, mqtt_url, redis_url, dry_run):
     Rootech.accura3300e.init(iotown_url, 'Rootech Accura3300e', mqtt_url, redis_url, dry_run=dry_run).loop_forever()
 
 if __name__ == '__main__':
-    app_desc = "IoT.own Post Process to Parse Messages from Various Sensors"
+    app_desc = "IOTOWN Post Process to Parse Messages from Various Sensors"
 
     parser = argparse.ArgumentParser(description=app_desc)
-    parser.add_argument("--url", help="IoT.own URL", required=True)
+    parser.add_argument("--url", help="IOTOWN URL", required=True)
     parser.add_argument("--mqtt_url", help="MQTT broker URL for IoT.own", required=False, default=None)
     parser.add_argument("--redis_url", help="Redis URL for context storage", required=False, default=None)
     parser.add_argument('--dry', help=" Do not upload data to the server", type=int, default=0)

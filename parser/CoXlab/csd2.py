@@ -10,6 +10,7 @@ import struct
 import asyncio
 import threading
 import traceback
+import argparse
 
 TAG = 'CSD2'
 
@@ -272,3 +273,30 @@ def post_process_up(message, param=None):
 
 def post_process_down(message):
     print(f"[{TAG}] gotcha {message}")
+
+
+if __name__ == '__main__':
+    app_desc = "IOTOWN Post Process for CoXlab CSD2"
+
+    parser = argparse.ArgumentParser(description=app_desc)
+    parser.add_argument("--url", help="IOTOWN URL", required=True)
+    parser.add_argument("--mqtt_url", help="MQTT broker URL for IoT.own", required=False, default=None)
+    parser.add_argument("--redis_url", help="Redis URL for context storage", required=False, default=None)
+    parser.add_argument('--dry', help=" Do not upload data to the server", type=int, default=0)
+    args = parser.parse_args()
+
+    print(app_desc)
+    url = args.url.strip()
+    url_parsed = urlparse(url)
+
+    print(f"URL: {url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else ""))
+
+    mqtt_url = args.mqtt_url.strip() if args.mqtt_url is not None else None
+        
+    if args.dry == 1:
+        dry_run = True
+        print("DRY RUNNING!")
+    else:
+        dry_run = False
+
+    init(url, 'CoXlab CSD2', mqtt_url, args.redis_url, dry_run=dry_run).loop_forever()

@@ -8,6 +8,7 @@ import pyiotown.post
 import redis
 from urllib.parse import urlparse
 import math
+import argparse
 
 TAG = 'RAK10701'
 
@@ -157,3 +158,29 @@ def distance(lat1, lon1, lat2, lon2):
     dist = dist * 60 * 1.1515
     dist = dist * 1.609344
     return dist
+
+if __name__ == '__main__':
+    app_desc = "IOTOWN Post Process for RAK10701"
+
+    parser = argparse.ArgumentParser(description=app_desc)
+    parser.add_argument("--url", help="IOTOWN URL", required=True)
+    parser.add_argument("--mqtt_url", help="MQTT broker URL for IoT.own", required=False, default=None)
+    parser.add_argument("--redis_url", help="Redis URL for context storage", required=False, default=None)
+    parser.add_argument('--dry', help=" Do not upload data to the server", type=int, default=0)
+    args = parser.parse_args()
+
+    print(app_desc)
+    url = args.url.strip()
+    url_parsed = urlparse(url)
+
+    print(f"URL: {url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else ""))
+
+    mqtt_url = args.mqtt_url.strip() if args.mqtt_url is not None else None
+        
+    if args.dry == 1:
+        dry_run = True
+        print("DRY RUNNING!")
+    else:
+        dry_run = False
+
+    init(url, 'RAK10701', mqtt_url, args.redis_url, dry_run=dry_run).loop_forever()

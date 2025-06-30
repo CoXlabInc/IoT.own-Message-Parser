@@ -1,22 +1,273 @@
 services:
-  iotown_message_parser:
-    image: iotown_message_parser
-    build:
-      context: .
-      dockerfile: Dockerfile
+  parser_csd2:
+    container_name: pp_csd2
+    image: iotown-message-parser:latest
     restart: always
     logging:
       driver: "local"
-    env_file:
-      - .env
-    volumes:
-      - ./parser:/root/
-    command: python3 -u run.py --url ${IOTOWN_URL} --redis_url redis://redis --dry ${DRY_RUN:-'0'}
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/csd2.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
 
-  redis:
-    image: redis:7.0.5-alpine
+  parser_aggregator:
+    container_name: pp_aggregator
+    image: iotown-message-parser:latest
     restart: always
     logging:
       driver: "local"
-    volumes:
-      - ./redis-data:/data
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/aggregator.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_mapper:
+    container_name: pp_mapper
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/mapper.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_multiplier:
+    container_name: pp_multipler
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/multiplier.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_rate_controller:
+    container_name: pp_rate_controller
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/rate_controller.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_to_number:
+    container_name: pp_to_number
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/to_number.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_trilateration:
+    container_name: pp_trilateration
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/trilateration.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_cuetech:
+    container_name: pp_cuetech
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Cuetech/common.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_dt_d100:
+    container_name: pp_dt_d100
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u DT/d100.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_dragino_lht65n:
+    container_name: pp_lht65n
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Dragino/lht65n.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_epever_chagecontroller:
+    container_name: pp_epever_chargecontroller
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u EPEVER/ChargeController.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_honeywell_hvt:
+    container_name: pp_honeywell_hvt
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Honeywell/hvt.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_lightstar_kdx300:
+    container_name: pp_lightstart_kdx300
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u LightStar/kdx300.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_milesight_am300:
+    container_name: pp_milesight_am300
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Milesight/am300.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_milesight_em300:
+    container_name: pp_milesight_em300
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Milesight/em300.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_milesight_em310_tilt:
+    container_name: pp_milesight_em310_tilt
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Milesight/em310_tilt.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_milesight_em310_udl:
+    container_name: pp_milesight_em310_udl
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Milesight/em310_udl.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_milesight_em500:
+    container_name: pp_milesight_em500
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Milesight/em500.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_plnetworks:
+    container_name: pp_plnetworks
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u PLNetworks/common.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_rakwireless_rak10701:
+    container_name: pp_rakwireless_rak10701
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u RAKWireless/rak10701.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_rootech_accura3300e:
+    container_name: pp_rootech_accura3300e
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u Rootech/accura3300e.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN

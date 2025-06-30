@@ -4,6 +4,7 @@ import pyiotown.post_process
 import redis
 from urllib.parse import urlparse
 import json
+import argparse
 
 TAG = 'Multiplier'
 
@@ -53,3 +54,29 @@ def post_process(message, param=None):
     r.delete(mutex_key)
     r.close()
     return message
+
+if __name__ == '__main__':
+    app_desc = "IOTOWN Post Process to multiply values"
+
+    parser = argparse.ArgumentParser(description=app_desc)
+    parser.add_argument("--url", help="IOTOWN URL", required=True)
+    parser.add_argument("--mqtt_url", help="MQTT broker URL for IoT.own", required=False, default=None)
+    parser.add_argument("--redis_url", help="Redis URL for context storage", required=False, default=None)
+    parser.add_argument('--dry', help=" Do not upload data to the server", type=int, default=0)
+    args = parser.parse_args()
+
+    print(app_desc)
+    url = args.url.strip()
+    url_parsed = urlparse(url)
+
+    print(f"URL: {url_parsed.scheme}://{url_parsed.hostname}" + (f":{url_parsed.port}" if url_parsed.port is not None else ""))
+
+    mqtt_url = args.mqtt_url.strip() if args.mqtt_url is not None else None
+        
+    if args.dry == 1:
+        dry_run = True
+        print("DRY RUNNING!")
+    else:
+        dry_run = False
+
+    init(url, 'Multiplier', mqtt_url, args.redis_url, dry_run=dry_run).loop_forever()
