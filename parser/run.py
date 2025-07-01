@@ -22,7 +22,6 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def main(iotown_url, mqtt_url, redis_url, dry_run):
     CoXlab.csd2.init(iotown_url, 'CoXlab CSD2', mqtt_url, redis_url, dry_run=dry_run).loop_start()
-    CoXlab.csd4.init(iotown_url, 'CoXlab CSD4', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     CoXlab.aggregator.init(iotown_url, 'Aggregator', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     CoXlab.mapper.init(iotown_url, 'Mapper', mqtt_url, redis_url, dry_run=dry_run).loop_start()
     CoXlab.multiplier.init(iotown_url, 'Multiplier', mqtt_url, redis_url, dry_run=dry_run).loop_start()
