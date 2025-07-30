@@ -1,5 +1,5 @@
 import base64
-from datetime import datetime, timedelta
+import datetime
 import pyiotown.post_process
 import pyiotown.get
 import pyiotown.delete
@@ -53,7 +53,7 @@ async def async_post_process(message, param):
 
     epoch = int.from_bytes(raw[0:5], 'little', signed=False)
     raw = raw[5:]
-    message['data']['sense_time'] = datetime.utcfromtimestamp(epoch).isoformat() + 'Z'
+    message['data']['sense_time'] = datetime.datetime.fromtimestamp(epoch, datetime.UTC).isoformat() + 'Z'
 
     prev_data_id = None
     result = await pyiotown.get.async_storage(iotown_url, iotown_token,
@@ -107,7 +107,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = None
                     raw = raw[7:]
                 else:
-                    message['data'][resp + "_time"] = datetime.utcfromtimestamp(epoch + raw[6]).isoformat() + 'Z'
+                    message['data'][resp + "_time"] = datetime.datetime.fromtimestamp(epoch + raw[6], datetime.UTC).isoformat() + 'Z'
                     v = ''
                     for x in raw[8:8+raw[7]]:
                         v += f"{x:02X}"
@@ -128,7 +128,7 @@ async def async_post_process(message, param):
 
                 raw = raw[3:]
                 for x in range(count):
-                    message['data'][f"{resp}_a{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
+                    message['data'][f"{resp}_a{ch}_time"] = datetime.datetime.fromtimestamp(epoch + raw[0], datetime.UTC).isoformat() + 'Z'
                     v = struct.unpack('<f', raw[1:5])[0]
                     message['data'][f"{resp}_a{ch}"] = v
                     print(f"[{TAG}] {resp}:{v}")
@@ -163,7 +163,7 @@ async def async_post_process(message, param):
                     message['data'][resp] = None
                     raw = raw[1:]
                 else:
-                    message['data'][resp + "_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
+                    message['data'][resp + "_time"] = datetime.datetime.fromtimestamp(epoch + raw[0], datetime.UTC).isoformat() + 'Z'
                     raw = raw[1:]
 
                     length = raw[0]
@@ -197,7 +197,7 @@ async def async_post_process(message, param):
                 raw = raw[3:]
 
                 for x in range(count):
-                    message['data'][f"{resp}_d{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[0]).isoformat() + 'Z'
+                    message['data'][f"{resp}_d{ch}_time"] = datetime.datetime.fromtimestamp(epoch + raw[0], datetime.UTC).isoformat() + 'Z'
                     message['data'][f"{resp}_d{ch}"] = raw[1]
                     raw = raw[2:]
                     ch += 1
@@ -219,33 +219,94 @@ async def async_post_process(message, param):
 
                 message['data'][req] += f"{ch},{state},{delay}"
 
-                message['data'][f"{resp}_d{ch}_time"] = datetime.utcfromtimestamp(epoch + raw[4]).isoformat() + 'Z'
+                message['data'][f"{resp}_d{ch}_time"] = datetime.datetime.fromtimestamp(epoch + raw[4], datetime.UTC).isoformat() + 'Z'
                 message['data'][f"{resp}_d{ch}"] = raw[5]
                 raw = raw[6:]
             elif type == 14:
                 # I2C
-                device = int.from_bytes(raw[1:3], 'little', signed=False)
-                device_list = [ 'SHT' ]
+                device = raw[1]
+                device_list = [ 'SHT', 'PCF8574,R', 'PCF8574,W' ]
 
                 message['data'][req] = device_list[device] if device < len(device_list) else None
                 if message['data'][req] == 'SHT':
-                    message['data'][f"{resp}_time"] = datetime.utcfromtimestamp(epoch + raw[3]).isoformat() + 'Z'
+                    message['data'][f"{resp}_time"] = datetime.datetime.fromtimestamp(epoch + raw[2], datetime.UTC).isoformat() + 'Z'
 
-                    length = raw[4]
+                    length = raw[3]
                     
                     sht_types = [ 'AUTO_DETECT', 'SHT3X', 'SHT85', 'SHT3X_ALT', 'SHTC1', 'SHTC3', 'SHTW1', 'SHTW2', 'SHT4X' ]
-                    message['data'][f"{resp}_type"] = sht_types[raw[5]]
+                    message['data'][f"{resp}_type"] = sht_types[raw[4]]
                     if length == 5:
-                        message['data'][f"{resp}_temperature"] = int.from_bytes(raw[6:8], 'little', signed=True) / 100
-                        message['data'][f"{resp}_humidity"] = int.from_bytes(raw[8:10], 'little', signed=False) / 100
+                        message['data'][f"{resp}_temperature"] = int.from_bytes(raw[5:7], 'little', signed=True) / 100
+                        message['data'][f"{resp}_humidity"] = int.from_bytes(raw[7:9], 'little', signed=False) / 100
                     else:
                         message['data'][f"{resp}_temperature"] = None
                         message['data'][f"{resp}_humidity"] = None
+                    raw = raw[3 + length + 1:]
+                elif message['data'][req] == 'PCF8574,R':
+                    addr = raw[2]
+                    message['data'][req] += f"0x{addr:02X}"
+                    message['data'][f"{resp}_time"] = datetime.datetime.fromtimestamp(epoch + raw[3], datetime.UTC).isoformat() + 'Z'
+                    length = raw[4]
+                    if length == 1:
+                        message['data'][resp] = raw[5]
+                    else:
+                        message['data'][resp] = None
                     raw = raw[4 + length + 1:]
+                elif message['data'][req] == 'PCF8574,W':
+                    addr = raw[2]
+                    v = raw[3]
+                    message['data'][req] += f",0x{addr:02X},0x{v:02X}"
+                    message['data'][f"{resp}_time"] = datetime.datetime.fromtimestamp(epoch + raw[4], datetime.UTC).isoformat() + 'Z'
+                    print(f"[{TAG}] {req}:{message['data'][req]}")
+                    raw = raw[5:]
                 else:
                     print(f"[{TAG}] unknown I2C device:{device}")
                     message['data'][req] = None
                     break
+            elif type in [ 15, 16 ]:
+                message['data'][req] = 'raw'
+                if type == 15:
+                    message['data'][req] += '232'
+                else:
+                    message['data'][req] += '485'
+                message['data'][req] += 'rs'
+                if raw[1] == 1:
+                    message['data'][req] += 's'
+                elif raw[1] == 2:
+                    message['data'][req] += 'i8'
+                elif raw[1] == 3:
+                    message['data'][req] += 'u8'
+                elif raw[1] == 4:
+                    message['data'][req] += 'i16'
+                elif raw[1] == 5:
+                    message['data'][req] += 'u16'
+                elif raw[1] == 6:
+                    message['data'][req] += 'i32'
+                elif raw[1] == 7:
+                    message['data'][req] += 'u32'
+                elif raw[1] == 8:
+                    message['data'][req] += 'i64'
+                elif raw[1] == 9:
+                    message['data'][req] += 'u64'
+                else:
+                    message['data'][req] += '?'
+                    message['data'][resp] = None
+                    break
+
+                message['data'][f"{resp}_time"] = datetime.datetime.fromtimestamp(epoch + raw[2], datetime.UTC).isoformat() + 'Z'
+
+                if raw[3] == 0:
+                    message['data'][resp] = None
+                elif raw[1] == 1:
+                    message['data'][resp] = str(raw[4:4+raw[3]])
+                elif raw[1] in [2, 4, 6, 8]:
+                    message['data'][resp] = int.from_bytes(raw[4:4+raw[3]], 'little', signed=True)
+                elif raw[1] in [3, 5, 7, 9]:
+                    message['data'][resp] = int.from_bytes(raw[4:4+raw[3]], 'little', signed=False)
+
+                print(f"[{TAG}] {resp}:{message['data'][resp]}")
+
+                raw = raw[4+raw[3]:]
             else:
                 print(f"[{TAG}] unknown type:{type}")
                 message['data'][req] = None
