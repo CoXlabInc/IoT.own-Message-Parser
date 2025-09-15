@@ -25,6 +25,19 @@ services:
       - redis
     command: python3 -u CoXlab/aggregator.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
 
+  parser_gnss:
+    container_name: pp_gnss
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u CoXlab/gnss.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
   parser_mapper:
     container_name: pp_mapper
     image: iotown-message-parser:latest
