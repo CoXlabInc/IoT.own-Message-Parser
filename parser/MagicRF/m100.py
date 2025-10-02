@@ -105,7 +105,7 @@ def parse(data):
                 elif data_payload[0] == 0x02:
                     aggregated_result['manufacturer'] = value_str
             elif command_code == 0x07: # module information
-
+                pass
         elif frame_type == 0x02: # notice frame
             if command_code == 0x22: # inventory
                 if data_length < 15: # RSSI(1) + PC(2) + EPC(12) = 15
