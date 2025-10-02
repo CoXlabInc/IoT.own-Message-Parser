@@ -284,3 +284,16 @@ services:
       - mosquitto
       - redis
     command: python3 -u Rootech/accura3300e.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
+
+  parser_magicrf:
+    container_name: pp_magicrf
+    image: iotown-message-parser:latest
+    restart: always
+    logging:
+      driver: "local"
+    networks:
+      - main
+    depends_on:
+      - mosquitto
+      - redis
+    command: python3 -u MagicRF/m100.py --url https://$IOTOWN_MESSAGE_PARSER_USER:$IOTOWN_MESSAGE_PARSER_TOKEN@iotown --mqtt_url tcp://mosquitto:8883 --redis_url redis://redis --dry $IOTOWN_MESSAGE_PARSER_DRY_RUN
