@@ -2110,6 +2110,15 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
                 out.uwb1Danger = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
             }
+            else if (length == 4)
+            {
+                let uwb1Danger = new Object();
+                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
+
+                uwb1Danger.id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
+                uwb1Danger.dist = (data[i + 5] >> 3) + ((data[i + 5] & 0b00000111) * 0.125);
+                out.uwbDanger = uwb1Danger;
+            }
         } else if (type == 0xF0) {
             out.battery = data[i + 2];
 
