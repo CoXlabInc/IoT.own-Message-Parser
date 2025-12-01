@@ -2088,9 +2088,9 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 if(val == 0)
                     out.anchorType ="Location";
                 else if(val == 1)
-                    out.anchorType ="LoDanger";
-                else if(val == 2)
                     out.anchorType ="Danger";
+                else if(val == 2)
+                    out.anchorType ="Alarm";
                 else 
                     out.anchorType ="Unknown";
                 
@@ -2104,7 +2104,23 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 out.shotcounter = ((data[i + 2] << 24) + (data[i + 3] << 16) + (data[i + 4] << 8) + data[i + 5]);
             }
         } else if (type == 0xD0) {
-            /* Danger Anchor Info */
+            /* Alarm Anchor Info */
+            if (length == 3)
+            {
+                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
+                out.uwb1Alarm = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
+            }
+            else if (length == 4)
+            {
+                let uwb1Alarm = new Object();
+                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
+
+                uwb1Alarm.id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
+                uwb1Alarm.dist = (data[i + 5] >> 3) + ((data[i + 5] & 0b00000111) * 0.125);
+                out.uwbAlarm = uwb1Alarm;
+            }
+        } else if (type == 0xD1) {
+            /* Alarm Anchor Info */
             if (length == 3)
             {
                 var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
