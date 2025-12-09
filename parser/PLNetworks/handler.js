@@ -2104,7 +2104,7 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 out.shotcounter = ((data[i + 2] << 24) + (data[i + 3] << 16) + (data[i + 4] << 8) + data[i + 5]);
             }
         } else if (type == 0xD0) {
-            /* Alarm Anchor Info */
+            /* Danger Anchor Info */
             if (length == 3)
             {
                 var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
