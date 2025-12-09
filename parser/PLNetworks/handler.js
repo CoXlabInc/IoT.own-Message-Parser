@@ -2108,33 +2108,34 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
             if (length == 3)
             {
                 var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
-                out.uwb1Alarm = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
-            }
-            else if (length == 4)
-            {
-                let uwb1Alarm = new Object();
-                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
-
-                uwb1Alarm.id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
-                uwb1Alarm.dist = (data[i + 5] >> 3) + ((data[i + 5] & 0b00000111) * 0.125);
-                out.uwbAlarm = uwb1Alarm;
-            }
-        } else if (type == 0xD1) {
-            /* Alarm Anchor Info */
-            if (length == 3)
-            {
-                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
                 out.uwb1Danger = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
             }
-            else if (length == 4)
-            {
-                let uwb1Danger = new Object();
-                var an = new Array(data[i + 2], data[i + 3], data[i + 4]);
+        } else if (type == 0xD1) {
+            /* UWB Dist */
+            let n = length/5;
+            let co = 0;
+            var uwbDist = [];
+			let k = i + 2;
 
-                uwb1Danger.id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
-                uwb1Danger.dist = (data[i + 5] >> 3) + ((data[i + 5] & 0b00000111) * 0.125);
-                out.uwbDanger = uwb1Danger;
-            }
+            for(var co = 0; co < n; co++) {
+                uwbDist[co] = new Object();
+
+				if(data[k] == 0)
+					uwbDist[co].dtype = "alarm";
+				else if (data[k] == 1)
+					uwbDist[co].dtype = "danger";
+				else
+					uwbDist[co].dtype = "loc";
+
+				let an = new Array(data[k + 1], data[k + 2], data[k + 3]);
+				uwbDist[co].id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
+				uwbDist[co].dist =(data[k + 4] >> 3) + ((data[k + 4] & 0b00000111) * 0.125);
+
+				k += 5;
+			}
+
+            out.uwbDist = uwbDist;
+
         } else if (type == 0xF0) {
             out.battery = data[i + 2];
 
