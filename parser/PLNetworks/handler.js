@@ -2111,13 +2111,55 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
                 out.uwb1Danger = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
             }
         } else if (type == 0xD1) {
+            /* PLS200 - new */
+            let scanIndex = 1;
+            let subLength = length;
+
+            let index = i + 2;
+            while (subLength > 0) {
+                let subType = data[index];
+                let result = null;
+                if (subType == 0x05) {
+                    out[`beacon${scanIndex}Mac`] = Buffer.concat([Buffer.from([ 0, 0 ]),
+                                                                  data.slice(index + 1, index + 7)])
+                        .readBigUInt64BE(0).toString(16).padStart(12, '0');
+                    out[`beacon${scanIndex}Batt`] = data[index + 7];
+                    
+                    subLength -= 8;
+                    index += 8;
+                } else if (subType >= 0x01 && subType <= 0x04) {
+                    index++;
+                    subLength--;
+    
+                    let keyName = `uwb${scanIndex}`;
+                    out[keyName] = {};
+                    for (let j = 0; j < subType; j++) {
+                        let eui = Buffer.concat([Buffer.from([ 0 ]),
+                                                 data.slice(index, index + 3)])
+                            .readUInt32BE(0).toString(16).padStart(6, '0');
+                        out[keyName][eui] = {
+                            /* 'dist': (data[index + 3] >> 3) + ((data[index + 3] & 0b00000111) * 0.125) */
+                            'dist': ((data[index + 3] << 8) + (data[index + 4]))/1000
+                        };
+                        subLength -= 5;
+                        index += 5;
+                    }
+                } else {
+                    result = `error: unknown subtype`;
+                    index += 1;
+                    subLength -= 1;
+                }
+
+                scanIndex++;
+            }
+        } else if (type == 0xD2) {
             /* UWB Dist */
-            let n = length/5;
+            let n = length/6;
             let co = 0;
             var uwbDist = [];
 			let k = i + 2;
 
-            for(var co = 0; co < n; co++) {
+            for(let co = 0; co < n; co++) {
                 uwbDist[co] = new Object();
 
 				if(data[k] == 0)
@@ -2129,9 +2171,10 @@ exports.dataHandler = function (data, node, gateway /* <= Buffer type */) {
 
 				let an = new Array(data[k + 1], data[k + 2], data[k + 3]);
 				uwbDist[co].id = 'LW140C5BFFFF' + toHexString(an).toUpperCase();
-				uwbDist[co].dist =(data[k + 4] >> 3) + ((data[k + 4] & 0b00000111) * 0.125);
+				/* uwbDist[co].dist =(data[k + 4] >> 3) + ((data[k + 4] & 0b00000111) * 0.125); */
+				uwbDist[co].dist =((data[k + 4] << 8) + data[k + 5])/1000; 
 
-				k += 5;
+				k += 6;
 			}
 
             out.uwbDist = uwbDist;
