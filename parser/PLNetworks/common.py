@@ -122,7 +122,12 @@ async def async_post_process(message):
 
     for key in message['data']:
         if key.startswith('uwb') and key.endswith('Danger') == False:
-            anchors = message['data'][key].copy().keys()
+            try:
+                anchors = message['data'][key].copy().keys()
+            except AttributeError:
+                print(f"[{TAG}] error on key name ' {key} '")
+                continue
+
             for anchor in anchors:
                 async def get_anchor_desc(anchor_id):
                     result = await pyiotown.get.async_node(iotown_url, iotown_token,
