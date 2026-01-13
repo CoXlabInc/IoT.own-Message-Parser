@@ -6,7 +6,7 @@ RUN python3 -m pip install redis
 RUN python3 -m pip install numpy
 RUN python3 -m pip install python-dateutil
 RUN python3 -m pip install pynmea2
-RUN python3 -m pip install pyiotown==0.6.5.dev2
+RUN python3 -m pip install pyiotown==0.6.5.dev3
 
 COPY ./parser .
 
