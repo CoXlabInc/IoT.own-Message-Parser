@@ -261,15 +261,20 @@ def add_data(data, address, value):
     elif address == 0x331A:
         data['battery_voltage_V'] = value / 100
     elif address == 0x331B:
-        data['battery_current_A_L'] = value / 100
+        data['battery_current_Adiv100_L'] = value
     elif address == 0x331C:
-        val_h = (value << 16) / 100
-        val_l = data.get('battery_current_A_L')
+        val_h = value
+        val_l = data.get('battery_current_Adiv100_L')
         if val_l is not None:
-            data['battery_current_A'] = val_h + val_l
-            del data['battery_current_A_L']
+            value = ((val_h & 0xFFFF) << 16) + (val_l & 0xFFFF)
+            if value < 0x80000000:
+                data['battery_current_A'] = value / 100
+            else:
+                data['battery_current_A'] = ((value - 0x100000000) / 100)
+            
+            del data['battery_current_Adiv100_L']
         else:
-            data['battery_current_A_H'] = val_h
+            data['battery_current_Adiv100_H'] = val_h
 
 def post_process(message, param=None):
     r = redis.from_url(redis_url)

@@ -91,9 +91,16 @@ async def async_post_process(message, param):
             req = f"req{req_index}"
             resp = f"resp{req_index}"
 
-            if type == 0 or type == 1:
-                # Modbus read holding or input registers
-                message['data'][req] = 'modbusrh' if type == 0 else 'modbusri'
+            if type in [ 0x00, 0x01, 0x11, 0x12 ]:
+                # Modbus read operations
+                if type == 0x00:
+                    message['data'][req] = 'modbusrh'
+                elif type == 0x01:
+                    message['data'][req] = 'modbusri'
+                elif type == 0x11:
+                    message['data'][req] = 'modbusrc'
+                else:
+                    message['data'][req] = 'modbusrd'
 
                 slave = raw[1]
                 start_addr = int.from_bytes(raw[2:4], 'little', signed=False)
